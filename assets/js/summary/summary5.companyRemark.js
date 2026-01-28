@@ -23,13 +23,12 @@ document.addEventListener("google-ready", async () => {
 
     /* ===============================
        2. VIRTUAL STYLE STATUS TABLE
-       Column order based (A,B,C)
     =============================== */
     const rows = styleStatus.map(r => {
       const vals = Object.values(r);
-      const styleId = N(vals[0]);   // Column A
-      const category = N(vals[1]);  // Column B
-      const remark = N(vals[2]);    // Column C
+      const styleId = N(vals[0]);
+      const category = N(vals[1]);
+      const remark = N(vals[2]);
 
       return {
         styleId,
@@ -48,11 +47,11 @@ document.addEventListener("google-ready", async () => {
 
     rows.forEach(r => {
       if (!r.styleId) return;
-
       const key = r.remark || "UNMAPPED";
 
       if (!result[key]) {
         result[key] = {
+          remark: key,
           styles: new Set(),
           sale: 0,
           stock: 0
@@ -62,12 +61,21 @@ document.addEventListener("google-ready", async () => {
       result[key].styles.add(r.styleId);
       result[key].sale += r.sale;
       result[key].stock += r.stock;
-
       grandTotalSale += r.sale;
     });
 
     /* ===============================
-       4. RENDER
+       4. SORT BY SALE (DESC)
+    =============================== */
+    const sorted = Object.values(result)
+      .map(r => ({
+        ...r,
+        salePct: grandTotalSale ? (r.sale / grandTotalSale) * 100 : 0
+      }))
+      .sort((a, b) => b.salePct - a.salePct);
+
+    /* ===============================
+       5. RENDER
     =============================== */
     let html = `
       <h3>Company Remark Wise Sale</h3>
@@ -80,18 +88,14 @@ document.addEventListener("google-ready", async () => {
           <th>Sum of Total Stock</th>
         </tr>`;
 
-    Object.keys(result).forEach(k => {
-      const pct = grandTotalSale
-        ? ((result[k].sale / grandTotalSale) * 100).toFixed(2)
-        : "0.00";
-
+    sorted.forEach(r => {
       html += `
         <tr>
-          <td>${k}</td>
-          <td>${result[k].styles.size}</td>
-          <td>${result[k].sale}</td>
-          <td>${pct}%</td>
-          <td>${result[k].stock}</td>
+          <td>${r.remark}</td>
+          <td>${r.styles.size}</td>
+          <td>${r.sale}</td>
+          <td>${r.salePct.toFixed(2)}%</td>
+          <td>${r.stock}</td>
         </tr>`;
     });
 
