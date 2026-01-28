@@ -1,5 +1,5 @@
 // =====================================
-// SUMMARY LOGIC (1 → 6) — FINAL WITH TITLES
+// SUMMARY LOGIC (1 → 6) — FINAL (FIXED MAPPING)
 // =====================================
 
 document.addEventListener("google-ready", async () => {
@@ -9,26 +9,29 @@ document.addEventListener("google-ready", async () => {
         const stockData = await fetchSheet("Stock");
         const styleStatusData = await fetchSheet("Style Status");
 
+        const clean = v => (v !== null && v !== undefined) ? String(v).trim() : "";
+
         /* ===============================
            SALE DAYS
         =============================== */
         const saleDaysMap = {};
         saleDaysData.forEach(row => {
-            saleDaysMap[row["Month"]] = Number(row["Days"]) || 0;
+            saleDaysMap[clean(row["Month"])] = Number(row["Days"]) || 0;
         });
         const totalSaleDays = Object.values(saleDaysMap).reduce((a, b) => a + b, 0);
 
         /* ===============================
-           STYLE MAPS
+           STYLE STATUS MAPS (FIXED)
         =============================== */
         const styleRemarkMap = {};
         const styleCategoryMap = {};
 
         styleStatusData.forEach(row => {
-            const style = row["Style ID"];
+            const style = clean(row["Style ID"]);
             if (!style) return;
-            styleRemarkMap[style] = row["Company Remark"] || "Unmapped";
-            styleCategoryMap[style] = row["Category"] || "Unmapped";
+
+            styleRemarkMap[style] = clean(row["Company Remark"]) || "Unmapped";
+            styleCategoryMap[style] = clean(row["Category"]) || "Unmapped";
         });
 
         /* ===============================
@@ -36,7 +39,7 @@ document.addEventListener("google-ready", async () => {
         =============================== */
         const monthSummary = {};
         saleData.forEach(row => {
-            const month = row["Month"];
+            const month = clean(row["Month"]);
             const units = Number(row["Units"]) || 0;
             if (!monthSummary[month]) monthSummary[month] = 0;
             monthSummary[month] += units;
@@ -59,7 +62,7 @@ document.addEventListener("google-ready", async () => {
         =============================== */
         const fcStockMap = {};
         stockData.forEach(row => {
-            const fc = row["FC"];
+            const fc = clean(row["FC"]);
             const units = Number(row["Units"]) || 0;
             if (!fc) return;
             if (!fcStockMap[fc]) fcStockMap[fc] = 0;
@@ -76,13 +79,13 @@ document.addEventListener("google-ready", async () => {
         document.getElementById("summary2").innerHTML = summary2HTML;
 
         /* ===============================
-           SUMMARY 3 – SC BAND SUMMARY
+           COMMON STYLE MAPS (CLEANED)
         =============================== */
         const styleSaleMap = {};
         const styleStockMap = {};
 
         saleData.forEach(row => {
-            const style = row["Style ID"];
+            const style = clean(row["Style ID"]);
             const units = Number(row["Units"]) || 0;
             if (!style) return;
             if (!styleSaleMap[style]) styleSaleMap[style] = 0;
@@ -90,110 +93,12 @@ document.addEventListener("google-ready", async () => {
         });
 
         stockData.forEach(row => {
-            const style = row["Style ID"];
+            const style = clean(row["Style ID"]);
             const units = Number(row["Units"]) || 0;
             if (!style) return;
             if (!styleStockMap[style]) styleStockMap[style] = 0;
             styleStockMap[style] += units;
         });
-
-        const bands = {
-            "0–30": { styles: new Set(), units: 0 },
-            "30–60": { styles: new Set(), units: 0 },
-            "60–120": { styles: new Set(), units: 0 },
-            "120+": { styles: new Set(), units: 0 }
-        };
-
-        Object.keys(styleSaleMap).forEach(style => {
-            const sale = styleSaleMap[style];
-            const stock = styleStockMap[style] || 0;
-            const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
-            const sc = drr > 0 ? stock / drr : 0;
-
-            let band = "120+";
-            if (sc <= 30) band = "0–30";
-            else if (sc <= 60) band = "30–60";
-            else if (sc <= 120) band = "60–120";
-
-            bands[band].styles.add(style);
-            bands[band].units += sale;
-        });
-
-        let summary3HTML = `<h3>SC Band Summary</h3>
-            <table class="summary-table">
-                <tr><th>Band</th><th>Styles</th><th>Total Units Sold</th></tr>`;
-        Object.keys(bands).forEach(band => {
-            summary3HTML += `
-                <tr>
-                    <td>${band}</td>
-                    <td>${bands[band].styles.size}</td>
-                    <td>${bands[band].units}</td>
-                </tr>`;
-        });
-        summary3HTML += `</table>`;
-        document.getElementById("summary3").innerHTML = summary3HTML;
-
-        /* ===============================
-           SUMMARY 4 – SIZE-WISE ANALYSIS
-        =============================== */
-        const sizeOrder = ["FS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL","8XL","9XL","10XL"];
-
-        const getSizeCategory = size => {
-            if (size === "FS") return "FS";
-            if (["S","M","L","XL","XXL"].includes(size)) return "Normal";
-            if (["3XL","4XL","5XL","6XL"].includes(size)) return "PLUS 1";
-            if (["7XL","8XL","9XL","10XL"].includes(size)) return "PLUS 2";
-            return "Others";
-        };
-
-        const sizeSaleMap = {};
-        const categorySaleMap = {};
-        let totalUnitsSold = 0;
-
-        saleData.forEach(row => {
-            const size = row["Size"];
-            const units = Number(row["Units"]) || 0;
-            if (!size) return;
-
-            if (!sizeSaleMap[size]) sizeSaleMap[size] = 0;
-            sizeSaleMap[size] += units;
-            totalUnitsSold += units;
-
-            const cat = getSizeCategory(size);
-            if (!categorySaleMap[cat]) categorySaleMap[cat] = 0;
-            categorySaleMap[cat] += units;
-        });
-
-        const sizeStockMap = {};
-        stockData.forEach(row => {
-            const size = row["Size"];
-            const units = Number(row["Units"]) || 0;
-            if (!size) return;
-            if (!sizeStockMap[size]) sizeStockMap[size] = 0;
-            sizeStockMap[size] += units;
-        });
-
-        let summary4HTML = `<h3>Size-wise Analysis Summary</h3>
-            <table class="summary-table">
-                <tr>
-                    <th>Size</th><th>Category</th><th>Units Sold</th>
-                    <th>% Share</th><th>Category % Share</th><th>Units in Stock</th>
-                </tr>`;
-        sizeOrder.forEach(size => {
-            const sold = sizeSaleMap[size] || 0;
-            const stock = sizeStockMap[size] || 0;
-            const category = getSizeCategory(size);
-            const sizeShare = totalUnitsSold > 0 ? ((sold / totalUnitsSold) * 100).toFixed(2) : "0.00";
-            const catShare = totalUnitsSold > 0 ? ((categorySaleMap[category] || 0) / totalUnitsSold * 100).toFixed(2) : "0.00";
-
-            summary4HTML += `
-                <tr>
-                    <td>${size}</td><td>${category}</td><td>${sold}</td>
-                    <td>${sizeShare}%</td><td>${catShare}%</td><td>${stock}</td>
-                </tr>`;
-        });
-        summary4HTML += `</table>`;
-        document.getElementById("summary4").innerHTML = summary4HTML;
 
         /* ===============================
            SUMMARY 5 – COMPANY REMARK
@@ -201,20 +106,15 @@ document.addEventListener("google-ready", async () => {
         const remarkSaleMap = {};
         const remarkStockMap = {};
 
-        saleData.forEach(row => {
-            const style = row["Style ID"];
-            const units = Number(row["Units"]) || 0;
-            const remark = styleRemarkMap[style] || "Unmapped";
-            if (!remarkSaleMap[remark]) remarkSaleMap[remark] = 0;
-            remarkSaleMap[remark] += units;
-        });
+        Object.keys(styleSaleMap).forEach(style => {
+            const remark = styleRemarkMap[style];
+            if (!remark) return;
 
-        stockData.forEach(row => {
-            const style = row["Style ID"];
-            const units = Number(row["Units"]) || 0;
-            const remark = styleRemarkMap[style] || "Unmapped";
+            if (!remarkSaleMap[remark]) remarkSaleMap[remark] = 0;
+            remarkSaleMap[remark] += styleSaleMap[style];
+
             if (!remarkStockMap[remark]) remarkStockMap[remark] = 0;
-            remarkStockMap[remark] += units;
+            remarkStockMap[remark] += styleStockMap[style] || 0;
         });
 
         let summary5HTML = `<h3>Company Remark Wise Sale</h3>
@@ -233,31 +133,26 @@ document.addEventListener("google-ready", async () => {
         /* ===============================
            SUMMARY 6 – CATEGORY WISE SALE
         =============================== */
-        const categorySaleFinal = {};
-        const categoryStockFinal = {};
+        const categorySaleMap = {};
+        const categoryStockMap = {};
 
-        saleData.forEach(row => {
-            const style = row["Style ID"];
-            const units = Number(row["Units"]) || 0;
-            const category = styleCategoryMap[style] || "Unmapped";
-            if (!categorySaleFinal[category]) categorySaleFinal[category] = 0;
-            categorySaleFinal[category] += units;
-        });
+        Object.keys(styleSaleMap).forEach(style => {
+            const category = styleCategoryMap[style];
+            if (!category) return;
 
-        stockData.forEach(row => {
-            const style = row["Style ID"];
-            const units = Number(row["Units"]) || 0;
-            const category = styleCategoryMap[style] || "Unmapped";
-            if (!categoryStockFinal[category]) categoryStockFinal[category] = 0;
-            categoryStockFinal[category] += units;
+            if (!categorySaleMap[category]) categorySaleMap[category] = 0;
+            categorySaleMap[category] += styleSaleMap[style];
+
+            if (!categoryStockMap[category]) categoryStockMap[category] = 0;
+            categoryStockMap[category] += styleStockMap[style] || 0;
         });
 
         let summary6HTML = `<h3>Category Wise Sale</h3>
             <table class="summary-table">
                 <tr><th>Category</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
-        Object.keys(categorySaleFinal).forEach(category => {
-            const sale = categorySaleFinal[category];
-            const stock = categoryStockFinal[category] || 0;
+        Object.keys(categorySaleMap).forEach(category => {
+            const sale = categorySaleMap[category];
+            const stock = categoryStockMap[category] || 0;
             const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
             const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
             summary6HTML += `<tr><td>${category}</td><td>${sale}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
