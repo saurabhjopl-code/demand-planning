@@ -15,7 +15,7 @@ document.addEventListener("google-ready", async () => {
     ];
 
     /* ===============================
-       SIZE → CATEGORY MAP (LOCKED)
+       SIZE → CATEGORY MAP
     =============================== */
     const sizeCategoryMap = size => {
       if (size === "FS") return "FS";
@@ -23,6 +23,16 @@ document.addEventListener("google-ready", async () => {
       if (["3XL","4XL","5XL","6XL"].includes(size)) return "PLUS 1";
       if (["7XL","8XL","9XL","10XL"].includes(size)) return "PLUS 2";
       return "";
+    };
+
+    /* ===============================
+       CATEGORY ROW SPANS (LOCKED)
+    =============================== */
+    const CATEGORY_SPAN = {
+      "FS": { start: "FS", span: 1 },
+      "Normal": { start: "S", span: 5 },
+      "PLUS 1": { start: "3XL", span: 4 },
+      "PLUS 2": { start: "7XL", span: 4 }
     };
 
     /* ===============================
@@ -47,16 +57,12 @@ document.addEventListener("google-ready", async () => {
        CATEGORY TOTAL SALE
     =============================== */
     const categorySaleTotal = {};
-
     SIZE_ORDER.forEach(size => {
       const cat = sizeCategoryMap(size);
       categorySaleTotal[cat] =
         (categorySaleTotal[cat] || 0) + (saleBySize[size] || 0);
     });
 
-    /* ===============================
-       CATEGORY % SHARE
-    =============================== */
     const categoryPct = {};
     Object.keys(categorySaleTotal).forEach(cat => {
       categoryPct[cat] = totalSale
@@ -65,17 +71,7 @@ document.addEventListener("google-ready", async () => {
     });
 
     /* ===============================
-       CATEGORY % SHARE DISPLAY RULE
-    =============================== */
-    const categoryDisplayRow = {
-      "FS": "FS",
-      "Normal": "S",
-      "PLUS 1": "3XL",
-      "PLUS 2": "7XL"
-    };
-
-    /* ===============================
-       RENDER
+       RENDER TABLE
     =============================== */
     let html = `
       <h3>Size-wise Analysis Summary</h3>
@@ -90,31 +86,34 @@ document.addEventListener("google-ready", async () => {
         </tr>`;
 
     SIZE_ORDER.forEach(size => {
+      const category = sizeCategoryMap(size);
       const unitsSold = saleBySize[size] || 0;
       const unitsStock = stockBySize[size] || 0;
       const sizePct = totalSale
         ? ((unitsSold / totalSale) * 100).toFixed(2)
         : "0.00";
-      const category = sizeCategoryMap(size);
 
-      const showCategoryPct =
-        categoryDisplayRow[category] === size
-          ? `${categoryPct[category]}%`
-          : "";
+      html += `<tr>
+        <td>${size}</td>
+        <td>${category}</td>
+        <td>${unitsSold}</td>
+        <td>${sizePct}%</td>`;
 
-      html += `
-        <tr>
-          <td>${size}</td>
-          <td>${category}</td>
-          <td>${unitsSold}</td>
-          <td>${sizePct}%</td>
-          <td>${showCategoryPct}</td>
-          <td>${unitsStock}</td>
-        </tr>`;
+      /* ===============================
+         MERGED CATEGORY % SHARE CELL
+      =============================== */
+      if (CATEGORY_SPAN[category]?.start === size) {
+        html += `
+          <td rowspan="${CATEGORY_SPAN[category].span}"
+              style="text-align:center; vertical-align:middle; font-weight:600;">
+            ${categoryPct[category]}%
+          </td>`;
+      }
+
+      html += `<td>${unitsStock}</td></tr>`;
     });
 
     html += `</table>`;
-
     document.getElementById("summary4").innerHTML = html;
 
   } catch (e) {
