@@ -1,25 +1,17 @@
 /* =========================================================
    dataLoader.js
-   PURPOSE:
-   - Fetch Google Sheets data (public sheet)
-   - Normalize headers safely
-   - Provide stable data to all summaries & reports
+   FINAL – FIXED
    ========================================================= */
 
-/* ===============================
-   CONFIG
-=============================== */
 const GOOGLE_SHEET_ID = "1kGUn-Sdp16NJB9rLjijrYnnSl9Jjrom5ZpYiTXFBZ1E";
 
 /* ===============================
-   INTERNAL CACHE
+   CACHE
 =============================== */
 const sheetCache = {};
 
 /* ===============================
-   HELPER: Normalize Headers
-   "Style ID" -> styleid
-   "Company Remark" -> companyremark
+   NORMALIZE ROW KEYS
 =============================== */
 function normalizeRow(row) {
   const normalized = {};
@@ -34,13 +26,10 @@ function normalizeRow(row) {
 }
 
 /* ===============================
-   FETCH SHEET USING GVIZ
+   FETCH SHEET (GVIZ)
 =============================== */
 async function fetchSheet(sheetName) {
-  // Return from cache if available
-  if (sheetCache[sheetName]) {
-    return sheetCache[sheetName];
-  }
+  if (sheetCache[sheetName]) return sheetCache[sheetName];
 
   const url =
     `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?` +
@@ -49,16 +38,16 @@ async function fetchSheet(sheetName) {
   const response = await fetch(url);
   const text = await response.text();
 
-  // GVIZ returns JS wrapped JSON → extract JSON
   const json = JSON.parse(
     text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1)
   );
 
   const table = json.table;
-  const headers = table.cols.map(col => col.label);
-  const rows = table.rows;
 
-  const data = rows.map(row => {
+  /* 🔥 FIX IS HERE */
+  const headers = table.cols.map(col => col.label || col.id);
+
+  const data = table.rows.map(row => {
     const obj = {};
     row.c.forEach((cell, i) => {
       obj[headers[i]] = cell ? cell.v : "";
@@ -71,7 +60,7 @@ async function fetchSheet(sheetName) {
 }
 
 /* ===============================
-   LOAD ALL REQUIRED SHEETS
+   LOAD ALL SHEETS
 =============================== */
 async function loadAllSheets() {
   try {
@@ -82,15 +71,13 @@ async function loadAllSheets() {
       fetchSheet("Sale Days")
     ]);
 
-    // Fire global ready event
     document.dispatchEvent(new Event("google-ready"));
-
   } catch (err) {
-    console.error("❌ Failed to load Google Sheets:", err);
+    console.error("Google Sheet load failed:", err);
   }
 }
 
 /* ===============================
-   AUTO LOAD ON PAGE LOAD
+   AUTO LOAD
 =============================== */
 document.addEventListener("DOMContentLoaded", loadAllSheets);
