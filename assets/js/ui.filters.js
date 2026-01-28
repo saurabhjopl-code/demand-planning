@@ -8,13 +8,43 @@ function renderFilterUI() {
   if (!container) return;
 
   container.innerHTML = `
-    <div class="filter-bar">
-      <select id="filterMonth" multiple></select>
-      <select id="filterFC" multiple></select>
-      <select id="filterMP" multiple></select>
-      <select id="filterAccount" multiple></select>
-      <input id="filterStyle" type="text" placeholder="Search Style ID" />
-      <button id="resetFilters">Reset</button>
+    <div class="filter-card">
+      <div class="filter-title">Filters</div>
+
+      <div class="filter-grid">
+        <div class="filter-item">
+          <label>Month</label>
+          <select id="filterMonth" multiple></select>
+        </div>
+
+        <div class="filter-item">
+          <label>FC</label>
+          <select id="filterFC" multiple></select>
+        </div>
+
+        <div class="filter-item">
+          <label>Marketplace</label>
+          <select id="filterMP" multiple></select>
+        </div>
+
+        <div class="filter-item">
+          <label>Account</label>
+          <select id="filterAccount" multiple></select>
+        </div>
+
+        <div class="filter-item">
+          <label>Style ID</label>
+          <input
+            id="filterStyle"
+            type="text"
+            placeholder="Search Style ID"
+          />
+        </div>
+      </div>
+
+      <div class="filter-actions">
+        <button id="resetFilters">Reset Filters</button>
+      </div>
     </div>
   `;
 }
@@ -27,7 +57,6 @@ function populateFilterOptions() {
   fillMultiSelect("filterMP", unique(sale, "MP"));
   fillMultiSelect("filterAccount", unique(sale, "Account"));
 
-  // Default = ALL selected
   APP_STATE.filters.month = unique(sale, "Month");
   APP_STATE.filters.fc = unique(sale, "FC");
   APP_STATE.filters.mp = unique(sale, "MP");
@@ -79,4 +108,3 @@ function bindFilterEvents() {
 function selectedValues(select) {
   return Array.from(select.selectedOptions).map(o => o.value);
 }
-
