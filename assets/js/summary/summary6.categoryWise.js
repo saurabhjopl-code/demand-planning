@@ -40,6 +40,7 @@ document.addEventListener("google-ready", async () => {
 
       if (!result[key]) {
         result[key] = {
+          category: key,
           styles: new Set(),
           sale: 0,
           stock: 0
@@ -49,9 +50,18 @@ document.addEventListener("google-ready", async () => {
       result[key].styles.add(r.styleId);
       result[key].sale += r.sale;
       result[key].stock += r.stock;
-
       grandTotalSale += r.sale;
     });
+
+    /* ===============================
+       SORT BY SALE (DESC)
+    =============================== */
+    const sorted = Object.values(result)
+      .map(r => ({
+        ...r,
+        salePct: grandTotalSale ? (r.sale / grandTotalSale) * 100 : 0
+      }))
+      .sort((a, b) => b.salePct - a.salePct);
 
     let html = `
       <h3>Category Wise Sale</h3>
@@ -64,18 +74,14 @@ document.addEventListener("google-ready", async () => {
           <th>Sum of Total Stock</th>
         </tr>`;
 
-    Object.keys(result).forEach(k => {
-      const pct = grandTotalSale
-        ? ((result[k].sale / grandTotalSale) * 100).toFixed(2)
-        : "0.00";
-
+    sorted.forEach(r => {
       html += `
         <tr>
-          <td>${k}</td>
-          <td>${result[k].styles.size}</td>
-          <td>${result[k].sale}</td>
-          <td>${pct}%</td>
-          <td>${result[k].stock}</td>
+          <td>${r.category}</td>
+          <td>${r.styles.size}</td>
+          <td>${r.sale}</td>
+          <td>${r.salePct.toFixed(2)}%</td>
+          <td>${r.stock}</td>
         </tr>`;
     });
 
