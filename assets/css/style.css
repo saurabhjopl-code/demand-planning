@@ -89,3 +89,20 @@ section {
     font-size: 13px;
 }
 
+.summary-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 10px;
+}
+
+.summary-table th,
+.summary-table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+    font-size: 14px;
+    text-align: center;
+}
+
+.summary-table th {
+    background: #f0f0f0;
+}
