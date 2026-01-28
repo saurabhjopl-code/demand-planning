@@ -2,30 +2,32 @@ document.addEventListener("google-ready", async () => {
   try {
     const sale = await fetchSheet("Sale");
     const stock = await fetchSheet("Stock");
-    const styleStatus = await fetchSheet("Style Status");
+    const styleStatusRaw = await fetchSheet("Style Status");
 
     const N = v => v == null ? "" : String(v).trim();
 
     /* ===============================
-       DETECT HEADERS SAFELY
+       NORMALIZE STYLE STATUS HEADERS
     =============================== */
-    const headers = Object.keys(styleStatus[0]);
-    const styleKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "styleid");
-    const remarkKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "companyremark");
+    const styleStatus = styleStatusRaw.map(r => {
+      const obj = {};
+      Object.keys(r).forEach(k => {
+        obj[k.replace(/\s+/g, "").toLowerCase()] = N(r[k]);
+      });
+      return obj;
+    });
 
-    if (!styleKey || !remarkKey) {
-      document.getElementById("summary5").innerHTML =
-        "<b style='color:red'>Style ID / Company Remark column not detected</b>";
-      return;
-    }
+    // Now keys are guaranteed
+    // styleid, category, companyremark
 
     /* ===============================
-       STYLE → REMARK MAP
+       BUILD STYLE → REMARK MAP
     =============================== */
     const remarkMap = {};
     styleStatus.forEach(r => {
-      const style = N(r[styleKey]);
-      if (style) remarkMap[style] = N(r[remarkKey]) || "UNMAPPED";
+      if (r.styleid) {
+        remarkMap[r.styleid] = r.companyremark || "UNMAPPED";
+      }
     });
 
     /* ===============================
@@ -89,6 +91,6 @@ document.addEventListener("google-ready", async () => {
     summary5.innerHTML = html;
 
   } catch (e) {
-    console.error("Summary 5 error:", e);
+    console.error("Summary 5 failed:", e);
   }
 });
