@@ -30,7 +30,7 @@ function renderFilterChips() {
     </div>
   `;
 
-  bindGlobalChipEvents();
+  bindGlobalEvents();
 }
 
 function chip(key, label) {
@@ -66,6 +66,7 @@ function populateChipOptions() {
   APP_STATE.filters.account = unique(sale, "Account");
 
   bindStyleSearch();
+  applyFilters();
 }
 
 function setupChip(key, values) {
@@ -77,6 +78,18 @@ function setupChip(key, values) {
     </label>
   `).join("");
 
+  dropdown.querySelectorAll("input").forEach(cb => {
+    cb.addEventListener("change", () => {
+      const selected = Array.from(
+        dropdown.querySelectorAll("input:checked")
+      ).map(i => i.value);
+
+      APP_STATE.filters[key] = selected;
+      updateChipText(key);
+      applyFilters();
+    });
+  });
+
   updateChipText(key);
 }
 
@@ -84,7 +97,7 @@ function setupChip(key, values) {
    EVENTS
 ========================= */
 
-function bindGlobalChipEvents() {
+function bindGlobalEvents() {
   document.querySelectorAll(".filter-chip").forEach(chip => {
     chip.addEventListener("click", e => {
       e.stopPropagation();
@@ -99,21 +112,25 @@ function bindGlobalChipEvents() {
     populateChipOptions();
     document.getElementById("filterStyle").value = "";
     APP_STATE.filters.styleId = "";
+    applyFilters();
   });
 }
 
 function closeAllChips() {
-  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("open"));
+  document.querySelectorAll(".filter-chip").forEach(c =>
+    c.classList.remove("open")
+  );
 }
 
 function bindStyleSearch() {
   document.getElementById("filterStyle").addEventListener("input", e => {
     APP_STATE.filters.styleId = e.target.value.trim();
+    applyFilters();
   });
 }
 
 /* =========================
-   UTILITIES
+   HELPERS
 ========================= */
 
 function updateChipText(key) {
@@ -125,8 +142,8 @@ function updateChipText(key) {
     `#${key}-dropdown input`
   ).length;
 
-  const el = document.getElementById(`${key}-value`);
-  el.textContent = checked === total ? "All" : `${checked} selected`;
+  document.getElementById(`${key}-value`).textContent =
+    checked === total ? "All" : `${checked} selected`;
 }
 
 function unique(data, key) {
