@@ -22,7 +22,7 @@ document.addEventListener("google-ready", async () => {
       if (["S","M","L","XL","XXL"].includes(size)) return "Normal";
       if (["3XL","4XL","5XL","6XL"].includes(size)) return "PLUS 1";
       if (["7XL","8XL","9XL","10XL"].includes(size)) return "PLUS 2";
-      return "Other";
+      return "";
     };
 
     /* ===============================
@@ -65,7 +65,17 @@ document.addEventListener("google-ready", async () => {
     });
 
     /* ===============================
-       RENDER TABLE
+       CATEGORY % SHARE DISPLAY RULE
+    =============================== */
+    const categoryDisplayRow = {
+      "FS": "FS",
+      "Normal": "S",
+      "PLUS 1": "3XL",
+      "PLUS 2": "7XL"
+    };
+
+    /* ===============================
+       RENDER
     =============================== */
     let html = `
       <h3>Size-wise Analysis Summary</h3>
@@ -87,13 +97,18 @@ document.addEventListener("google-ready", async () => {
         : "0.00";
       const category = sizeCategoryMap(size);
 
+      const showCategoryPct =
+        categoryDisplayRow[category] === size
+          ? `${categoryPct[category]}%`
+          : "";
+
       html += `
         <tr>
           <td>${size}</td>
           <td>${category}</td>
           <td>${unitsSold}</td>
           <td>${sizePct}%</td>
-          <td>${categoryPct[category]}%</td>
+          <td>${showCategoryPct}</td>
           <td>${unitsStock}</td>
         </tr>`;
     });
