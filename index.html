@@ -1,71 +1,62 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
-    <title>Demand Planning</title>
-    <link rel="stylesheet" href="assets/css/style.css">
+  <meta charset="UTF-8" />
+  <title>Demand Planning</title>
+
+  <link rel="stylesheet" href="style.css" />
+
+  <!-- SheetJS for Excel export -->
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 </head>
+
 <body>
-
-<header class="app-header">
-    <div class="header-left">
-        <img src="assets/images/logo.png" alt="Company Logo">
+  <!-- HEADER -->
+  <header class="app-header">
+    <div class="logo">
+      <img src="logo.png" alt="Company Logo" />
     </div>
 
-    <div class="header-center">
-        <h1>Demand Planning</h1>
+    <h1>Demand Planning</h1>
+
+    <div class="actions">
+      <button id="exportSummaryBtn">Export Summary</button>
+      <button id="exportFullBtn">Export Full Report</button>
     </div>
+  </header>
 
-    <div class="header-right">
-        <button id="exportSummary">Export Summary</button>
-        <button id="exportFull">Export Full Report</button>
-    </div>
-</header>
+  <!-- SUMMARY SECTION -->
+  <section class="summary-section">
+    <div id="summary1" class="summary-card"></div>
+    <div id="summary2" class="summary-card"></div>
+    <div id="summary3" class="summary-card"></div>
+    <div id="summary4" class="summary-card"></div>
+    <div id="summary5" class="summary-card"></div>
+    <div id="summary6" class="summary-card"></div>
+  </section>
 
-<main class="container">
+  <!-- REPORTS PLACEHOLDER -->
+  <section class="reports-section">
+    <h2>Reports</h2>
+  </section>
 
-    <!-- SUMMARY SECTION -->
-    <section id="summarySection">
-        <h2>Summary</h2>
+  <!-- CORE -->
+  <script src="js/googleLoader.js"></script>
+  <script src="js/dataLoader.js"></script>
 
-        <div class="summary-grid">
-            <div class="summary-card" id="summary1">Summary 1</div>
-            <div class="summary-card" id="summary2">Summary 2</div>
-            <div class="summary-card" id="summary3">Summary 3</div>
-            <div class="summary-card" id="summary4">Summary 4</div>
-            <div class="summary-card" id="summary5">Summary 5</div>
-            <div class="summary-card" id="summary6">Summary 6</div>
-        </div>
-    </section>
+  <!-- SUMMARY SCRIPTS -->
+  <script src="summary/summary1.saleDetails.js"></script>
+  <script src="summary/summary2.fcStock.js"></script>
+  <script src="summary/summary3.scBand.js"></script>
+  <script src="summary/summary4.sizeWise.js"></script>
+  <script src="summary/summary5.companyRemark.js"></script>
+  <script src="summary/summary6.categoryWise.js"></script>
 
-    <!-- REPORT TABS -->
-    <section id="reportsSection">
-        <h2>Reports</h2>
-        <div id="reportTabs">
-            <!-- Tabs added later -->
-        </div>
-        <div id="reportContent">
-            <!-- Report content -->
-        </div>
-    </section>
+  <!-- EXPORT -->
+  <script src="export/exportSummary.js"></script>
 
-</main>
-
-<footer class="app-footer">
+  <footer class="app-footer">
     © Copy Right Rajnandini Fashion India Limited
-</footer>
-
-<script src="assets/js/config.js"></script>
-<script src="assets/js/dataLoader.js"></script>
-<script src="assets/js/ui.js"></script>
-<script src="assets/js/summary/summary1.saleDetails.js"></script>
-<script src="assets/js/summary/summary2.fcStock.js"></script>
-<script src="assets/js/summary/summary3.scBand.js"></script>
-<script src="assets/js/summary/summary4.sizeWise.js"></script>
-<script src="assets/js/summary/summary5.companyRemark.js"></script>
-<script src="assets/js/summary/summary6.categoryWise.js"></script>
-<script src="assets/js/reports/reports.ui.js"></script>
-
+  </footer>
 </body>
 </html>
-
