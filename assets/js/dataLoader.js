@@ -81,16 +81,3 @@ async function loadAllSheets() {
    AUTO LOAD
 =============================== */
 document.addEventListener("DOMContentLoaded", loadAllSheets);
-document.addEventListener("google-ready", () => {
-  // Cache raw data globally (NO FILTERING YET)
-  APP_STATE.rawData.sale = window.SALE_DATA || [];
-  APP_STATE.rawData.stock = window.STOCK_DATA || [];
-  APP_STATE.rawData.styleStatus = window.STYLE_STATUS_DATA || [];
-  APP_STATE.rawData.saleDays = window.SALE_DAYS_DATA || [];
-
-  // Default filtered data = raw data
-  APP_STATE.filteredData.sale = [...APP_STATE.rawData.sale];
-  APP_STATE.filteredData.stock = [...APP_STATE.rawData.stock];
-  APP_STATE.filteredData.styleStatus = [...APP_STATE.rawData.styleStatus];
-  APP_STATE.filteredData.saleDays = [...APP_STATE.rawData.saleDays];
-});
