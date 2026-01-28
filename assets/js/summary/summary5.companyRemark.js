@@ -1,35 +1,48 @@
 document.addEventListener("google-ready", async () => {
-  const styleStatusRaw = await fetchSheet("Style Status");
+  try {
+    const raw = await fetchSheet("Style Status");
 
-  const result = {};
+    console.log("RAW STYLE STATUS ROW SAMPLE:", raw[0]);
 
-  styleStatusRaw.forEach(r => {
-    const row = normalizeRow(r);
+    const result = {};
 
-    const styleId = row.styleid;
-    const remark = row.companyremark || "UNMAPPED";
+    raw.forEach(r => {
+      const row = normalizeRow(r);
 
-    if (!styleId) return;
+      // DEBUG LOG (keep for now)
+      console.log("NORMALIZED ROW:", row);
 
-    result[remark] = (result[remark] || 0) + 1;
-  });
+      const styleId = row.styleid;
+      const remark = row.companyremark;
 
-  let html = `
-    <h3>Company Remark Wise (COUNT ONLY)</h3>
-    <table class="summary-table">
-      <tr>
-        <th>Company Remark</th>
-        <th>Count of Style ID</th>
-      </tr>`;
+      if (!styleId) return;
 
-  Object.keys(result).forEach(k => {
-    html += `
-      <tr>
-        <td>${k}</td>
-        <td>${result[k]}</td>
-      </tr>`;
-  });
+      const key = remark && remark !== "" ? remark : "UNMAPPED";
 
-  html += `</table>`;
-  document.getElementById("summary5").innerHTML = html;
+      result[key] = (result[key] || 0) + 1;
+    });
+
+    let html = `
+      <h3>Company Remark Wise (COUNT ONLY)</h3>
+      <table class="summary-table">
+        <tr>
+          <th>Company Remark</th>
+          <th>Count of Style ID</th>
+        </tr>`;
+
+    Object.keys(result).forEach(k => {
+      html += `
+        <tr>
+          <td>${k}</td>
+          <td>${result[k]}</td>
+        </tr>`;
+    });
+
+    html += `</table>`;
+
+    document.getElementById("summary5").innerHTML = html;
+
+  } catch (err) {
+    console.error("SUMMARY 5 FAILED:", err);
+  }
 });
