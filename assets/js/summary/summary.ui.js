@@ -5,16 +5,17 @@
 
 document.addEventListener("google-ready", async () => {
     try {
+        /* ===============================
+           SUMMARY 1 – SALE DETAILS
+        =============================== */
         const saleData = await fetchSheet("Sale");
         const saleDaysData = await fetchSheet("Sale Days");
 
-        // Map Month -> Sale Days
         const saleDaysMap = {};
         saleDaysData.forEach(row => {
             saleDaysMap[row["Month"]] = Number(row["Days"]) || 0;
         });
 
-        // Aggregate sales by Month
         const monthSummary = {};
         saleData.forEach(row => {
             const month = row["Month"];
@@ -26,8 +27,7 @@ document.addEventListener("google-ready", async () => {
             monthSummary[month] += units;
         });
 
-        // Build table
-        let html = `
+        let summary1HTML = `
             <table class="summary-table">
                 <tr>
                     <th>Month</th>
@@ -41,7 +41,7 @@ document.addEventListener("google-ready", async () => {
             const days = saleDaysMap[month] || 0;
             const drr = days > 0 ? (totalUnits / days).toFixed(2) : "0.00";
 
-            html += `
+            summary1HTML += `
                 <tr>
                     <td>${month}</td>
                     <td>${totalUnits}</td>
@@ -50,13 +50,54 @@ document.addEventListener("google-ready", async () => {
             `;
         });
 
-        html += `</table>`;
+        summary1HTML += `</table>`;
+        document.getElementById("summary1").innerHTML = summary1HTML;
 
-        document.getElementById("summary1").innerHTML = html;
+        /* ===============================
+           SUMMARY 2 – CURRENT FC STOCK
+           FC | Total Stock
+        =============================== */
+
+        const stockData = await fetchSheet("Stock");
+
+        const fcStockMap = {};
+        stockData.forEach(row => {
+            const fc = row["FC"];
+            const units = Number(row["Units"]) || 0;
+
+            if (!fc) return;
+
+            if (!fcStockMap[fc]) {
+                fcStockMap[fc] = 0;
+            }
+            fcStockMap[fc] += units;
+        });
+
+        let summary2HTML = `
+            <table class="summary-table">
+                <tr>
+                    <th>FC</th>
+                    <th>Total Stock</th>
+                </tr>
+        `;
+
+        Object.keys(fcStockMap).forEach(fc => {
+            summary2HTML += `
+                <tr>
+                    <td>${fc}</td>
+                    <td>${fcStockMap[fc]}</td>
+                </tr>
+            `;
+        });
+
+        summary2HTML += `</table>`;
+        document.getElementById("summary2").innerHTML = summary2HTML;
 
     } catch (error) {
-        document.getElementById("summary1").innerHTML =
-            `<p style="color:red">Error loading Sale Summary</p>`;
         console.error(error);
+        document.getElementById("summary1").innerHTML =
+            `<p style="color:red">Error loading Summary</p>`;
+        document.getElementById("summary2").innerHTML =
+            `<p style="color:red">Error loading Summary</p>`;
     }
 });
