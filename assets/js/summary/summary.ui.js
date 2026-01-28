@@ -1,5 +1,5 @@
 // =====================================
-// SUMMARY LOGIC (1 → 4)
+// SUMMARY LOGIC (1 → 5)
 // =====================================
 
 document.addEventListener("google-ready", async () => {
@@ -10,6 +10,7 @@ document.addEventListener("google-ready", async () => {
         const saleData = await fetchSheet("Sale");
         const saleDaysData = await fetchSheet("Sale Days");
         const stockData = await fetchSheet("Stock");
+        const styleStatusData = await fetchSheet("Style Status");
 
         /* ===============================
            SALE DAYS
@@ -21,6 +22,16 @@ document.addEventListener("google-ready", async () => {
 
         const totalSaleDays = Object.values(saleDaysMap)
             .reduce((a, b) => a + b, 0);
+
+        /* ===============================
+           STYLE → COMPANY REMARK MAP
+        =============================== */
+        const styleRemarkMap = {};
+        styleStatusData.forEach(row => {
+            const style = row["Style ID"];
+            const remark = row["Company Remark"] || "Unmapped";
+            if (style) styleRemarkMap[style] = remark;
+        });
 
         /* ===============================
            SUMMARY 1 – SALE DETAILS
@@ -130,7 +141,6 @@ document.addEventListener("google-ready", async () => {
         /* ===============================
            SUMMARY 4 – SIZE-WISE ANALYSIS
         =============================== */
-
         const sizeOrder = [
             "FS","S","M","L","XL","XXL",
             "3XL","4XL","5XL","6XL",
@@ -213,9 +223,62 @@ document.addEventListener("google-ready", async () => {
         summary4HTML += `</table>`;
         document.getElementById("summary4").innerHTML = summary4HTML;
 
+        /* ===============================
+           SUMMARY 5 – COMPANY REMARK WISE
+        =============================== */
+        const remarkSaleMap = {};
+        const remarkStockMap = {};
+
+        saleData.forEach(row => {
+            const style = row["Style ID"];
+            const units = Number(row["Units"]) || 0;
+            const remark = styleRemarkMap[style] || "Unmapped";
+
+            if (!remarkSaleMap[remark]) remarkSaleMap[remark] = 0;
+            remarkSaleMap[remark] += units;
+        });
+
+        stockData.forEach(row => {
+            const style = row["Style ID"];
+            const units = Number(row["Units"]) || 0;
+            const remark = styleRemarkMap[style] || "Unmapped";
+
+            if (!remarkStockMap[remark]) remarkStockMap[remark] = 0;
+            remarkStockMap[remark] += units;
+        });
+
+        let summary5HTML = `
+            <table class="summary-table">
+                <tr>
+                    <th>Company Remark</th>
+                    <th>Total Units Sold</th>
+                    <th>DRR</th>
+                    <th>SC</th>
+                </tr>
+        `;
+
+        Object.keys(remarkSaleMap).forEach(remark => {
+            const sale = remarkSaleMap[remark];
+            const stock = remarkStockMap[remark] || 0;
+            const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
+            const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
+
+            summary5HTML += `
+                <tr>
+                    <td>${remark}</td>
+                    <td>${sale}</td>
+                    <td>${drr.toFixed(2)}</td>
+                    <td>${sc}</td>
+                </tr>
+            `;
+        });
+
+        summary5HTML += `</table>`;
+        document.getElementById("summary5").innerHTML = summary5HTML;
+
     } catch (error) {
         console.error(error);
-        ["summary1","summary2","summary3","summary4"].forEach(id => {
+        ["summary1","summary2","summary3","summary4","summary5"].forEach(id => {
             document.getElementById(id).innerHTML =
                 `<p style="color:red">Error loading summary</p>`;
         });
