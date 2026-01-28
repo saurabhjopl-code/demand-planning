@@ -2,30 +2,29 @@ document.addEventListener("google-ready", async () => {
   try {
     const sale = await fetchSheet("Sale");
     const stock = await fetchSheet("Stock");
-    const styleStatus = await fetchSheet("Style Status");
+    const styleStatusRaw = await fetchSheet("Style Status");
 
     const N = v => v == null ? "" : String(v).trim();
 
     /* ===============================
-       DETECT HEADERS SAFELY
+       NORMALIZE STYLE STATUS HEADERS
     =============================== */
-    const headers = Object.keys(styleStatus[0]);
-    const styleKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "styleid");
-    const categoryKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "category");
-
-    if (!styleKey || !categoryKey) {
-      document.getElementById("summary6").innerHTML =
-        "<b style='color:red'>Style ID / Category column not detected</b>";
-      return;
-    }
+    const styleStatus = styleStatusRaw.map(r => {
+      const obj = {};
+      Object.keys(r).forEach(k => {
+        obj[k.replace(/\s+/g, "").toLowerCase()] = N(r[k]);
+      });
+      return obj;
+    });
 
     /* ===============================
        STYLE → CATEGORY MAP
     =============================== */
     const categoryMap = {};
     styleStatus.forEach(r => {
-      const style = N(r[styleKey]);
-      if (style) categoryMap[style] = N(r[categoryKey]) || "UNMAPPED";
+      if (r.styleid) {
+        categoryMap[r.styleid] = r.category || "UNMAPPED";
+      }
     });
 
     /* ===============================
@@ -89,6 +88,6 @@ document.addEventListener("google-ready", async () => {
     summary6.innerHTML = html;
 
   } catch (e) {
-    console.error("Summary 6 error:", e);
+    console.error("Summary 6 failed:", e);
   }
 });
