@@ -3,102 +3,66 @@ document.addEventListener("google-ready", async () => {
     const sale = await fetchSheet("Sale");
     const stock = await fetchSheet("Stock");
     const saleDays = await fetchSheet("Sale Days");
-    const styleStatus = await fetchSheet("Style Status");
+    const ss = await fetchSheet("Style Status");
 
     const N = v => v == null ? "" : String(v).trim();
 
-    /* ===============================
-       TOTAL SALE DAYS
-    =============================== */
-    const totalDays = saleDays.reduce(
-      (a, r) => a + (Number(r["Days"]) || 0),
-      0
+    // 🔑 FIND CORRECT COMPANY REMARK COLUMN
+    const remarkKey = Object.keys(ss[0]).find(
+      k => k.trim().toLowerCase() === "company remark"
     );
 
-    /* ===============================
-       STYLE → COMPANY REMARK MAP
-    =============================== */
+    if (!remarkKey) {
+      document.getElementById("summary5").innerHTML =
+        "<b style='color:red'>Company Remark column not found in Style Status</b>";
+      return;
+    }
+
+    const totalDays = saleDays.reduce((a,r)=>a+(Number(r.Days)||0),0);
+
     const remarkMap = {};
-    styleStatus.forEach(r => {
-      const style = N(r["Style ID"]);
-      const remark = N(r["Company Remark"]);
-      if (!style) return;
-
-      // IMPORTANT: allow blank, handle later
-      remarkMap[style] = remark;
+    ss.forEach(r => {
+      remarkMap[N(r["Style ID"])] = N(r[remarkKey]);
     });
 
-    /* ===============================
-       SALE & STOCK BY STYLE
-    =============================== */
     const saleByStyle = {};
-    const stockByStyle = {};
-
     sale.forEach(r => {
-      const style = N(r["Style ID"]);
-      const units = Number(r["Units"]) || 0;
-      if (!style) return;
-      saleByStyle[style] = (saleByStyle[style] || 0) + units;
+      const s = N(r["Style ID"]);
+      saleByStyle[s] = (saleByStyle[s]||0) + (Number(r.Units)||0);
     });
 
+    const stockByStyle = {};
     stock.forEach(r => {
-      const style = N(r["Style ID"]);
-      const units = Number(r["Units"]) || 0;
-      if (!style) return;
-      stockByStyle[style] = (stockByStyle[style] || 0) + units;
+      const s = N(r["Style ID"]);
+      stockByStyle[s] = (stockByStyle[s]||0) + (Number(r.Units)||0);
     });
 
-    /* ===============================
-       AGGREGATE BY COMPANY REMARK
-    =============================== */
     const result = {};
-
-    Object.keys(saleByStyle).forEach(style => {
-      let remark = remarkMap[style];
-
-      // 🔒 FINAL FIX
-      if (!remark) remark = "UNMAPPED";
-
-      if (!result[remark]) {
-        result[remark] = { sale: 0, stock: 0 };
-      }
-
-      result[remark].sale += saleByStyle[style];
-      result[remark].stock += stockByStyle[style] || 0;
+    Object.keys(saleByStyle).forEach(s => {
+      const remark = remarkMap[s] || "UNMAPPED";
+      if (!result[remark]) result[remark] = {sale:0, stock:0};
+      result[remark].sale += saleByStyle[s];
+      result[remark].stock += stockByStyle[s]||0;
     });
 
-    /* ===============================
-       RENDER
-    =============================== */
-    let html = `
-      <h3>Company Remark Wise Sale</h3>
+    let html = `<h3>Company Remark Wise Sale</h3>
       <table class="summary-table">
-        <tr>
-          <th>Company Remark</th>
-          <th>Total Units Sold</th>
-          <th>DRR</th>
-          <th>SC</th>
-        </tr>`;
+        <tr><th>Company Remark</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
 
-    Object.keys(result).forEach(remark => {
-      const saleUnits = result[remark].sale;
-      const stockUnits = result[remark].stock;
-      const drr = totalDays ? saleUnits / totalDays : 0;
-      const sc = drr ? (stockUnits / drr).toFixed(2) : "0.00";
-
-      html += `
-        <tr>
-          <td>${remark}</td>
-          <td>${saleUnits}</td>
-          <td>${drr.toFixed(2)}</td>
-          <td>${sc}</td>
-        </tr>`;
+    Object.keys(result).forEach(r => {
+      const drr = totalDays ? result[r].sale/totalDays : 0;
+      html += `<tr>
+        <td>${r}</td>
+        <td>${result[r].sale}</td>
+        <td>${drr.toFixed(2)}</td>
+        <td>${drr ? (result[r].stock/drr).toFixed(2) : "0.00"}</td>
+      </tr>`;
     });
 
     html += `</table>`;
-    document.getElementById("summary5").innerHTML = html;
+    summary5.innerHTML = html;
 
   } catch (e) {
-    console.error("Summary 5 failed:", e);
+    console.error(e);
   }
 });
