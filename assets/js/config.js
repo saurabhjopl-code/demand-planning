@@ -1,6 +1,21 @@
-// Google Sheet configuration (to be added later)
-const CONFIG = {
-    SHEET_ID: "",
-    API_KEY: ""
+window.APP_STATE = {
+  rawData: {
+    sale: [],
+    stock: [],
+    styleStatus: [],
+    saleDays: []
+  },
+  filteredData: {
+    sale: [],
+    stock: [],
+    styleStatus: [],
+    saleDays: []
+  },
+  filters: {
+    month: [],
+    fc: [],
+    mp: [],
+    account: [],
+    styleId: ""
+  }
 };
-
