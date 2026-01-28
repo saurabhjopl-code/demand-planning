@@ -1,12 +1,9 @@
 // =====================================
-// SUMMARY LOGIC (1 → 6) — FINAL
+// SUMMARY LOGIC (1 → 6) — FINAL WITH TITLES
 // =====================================
 
 document.addEventListener("google-ready", async () => {
     try {
-        /* ===============================
-           LOAD DATA
-        =============================== */
         const saleData = await fetchSheet("Sale");
         const saleDaysData = await fetchSheet("Sale Days");
         const stockData = await fetchSheet("Stock");
@@ -19,9 +16,7 @@ document.addEventListener("google-ready", async () => {
         saleDaysData.forEach(row => {
             saleDaysMap[row["Month"]] = Number(row["Days"]) || 0;
         });
-
-        const totalSaleDays = Object.values(saleDaysMap)
-            .reduce((a, b) => a + b, 0);
+        const totalSaleDays = Object.values(saleDaysMap).reduce((a, b) => a + b, 0);
 
         /* ===============================
            STYLE MAPS
@@ -32,7 +27,6 @@ document.addEventListener("google-ready", async () => {
         styleStatusData.forEach(row => {
             const style = row["Style ID"];
             if (!style) return;
-
             styleRemarkMap[style] = row["Company Remark"] || "Unmapped";
             styleCategoryMap[style] = row["Category"] || "Unmapped";
         });
@@ -48,10 +42,9 @@ document.addEventListener("google-ready", async () => {
             monthSummary[month] += units;
         });
 
-        let summary1HTML = `
+        let summary1HTML = `<h3>Sale Details</h3>
             <table class="summary-table">
-                <tr><th>Month</th><th>Total Units Sold</th><th>DRR</th></tr>
-        `;
+                <tr><th>Month</th><th>Total Units Sold</th><th>DRR</th></tr>`;
         Object.keys(monthSummary).forEach(month => {
             const units = monthSummary[month];
             const days = saleDaysMap[month] || 0;
@@ -73,10 +66,9 @@ document.addEventListener("google-ready", async () => {
             fcStockMap[fc] += units;
         });
 
-        let summary2HTML = `
+        let summary2HTML = `<h3>Current FC Stock</h3>
             <table class="summary-table">
-                <tr><th>FC</th><th>Total Stock</th></tr>
-        `;
+                <tr><th>FC</th><th>Total Stock</th></tr>`;
         Object.keys(fcStockMap).forEach(fc => {
             summary2HTML += `<tr><td>${fc}</td><td>${fcStockMap[fc]}</td></tr>`;
         });
@@ -127,18 +119,16 @@ document.addEventListener("google-ready", async () => {
             bands[band].units += sale;
         });
 
-        let summary3HTML = `
+        let summary3HTML = `<h3>SC Band Summary</h3>
             <table class="summary-table">
-                <tr><th>Band</th><th>Styles</th><th>Total Units Sold</th></tr>
-        `;
+                <tr><th>Band</th><th>Styles</th><th>Total Units Sold</th></tr>`;
         Object.keys(bands).forEach(band => {
             summary3HTML += `
                 <tr>
                     <td>${band}</td>
                     <td>${bands[band].styles.size}</td>
                     <td>${bands[band].units}</td>
-                </tr>
-            `;
+                </tr>`;
         });
         summary3HTML += `</table>`;
         document.getElementById("summary3").innerHTML = summary3HTML;
@@ -146,11 +136,7 @@ document.addEventListener("google-ready", async () => {
         /* ===============================
            SUMMARY 4 – SIZE-WISE ANALYSIS
         =============================== */
-        const sizeOrder = [
-            "FS","S","M","L","XL","XXL",
-            "3XL","4XL","5XL","6XL",
-            "7XL","8XL","9XL","10XL"
-        ];
+        const sizeOrder = ["FS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL","8XL","9XL","10XL"];
 
         const getSizeCategory = size => {
             if (size === "FS") return "FS";
@@ -183,48 +169,29 @@ document.addEventListener("google-ready", async () => {
             const size = row["Size"];
             const units = Number(row["Units"]) || 0;
             if (!size) return;
-
             if (!sizeStockMap[size]) sizeStockMap[size] = 0;
             sizeStockMap[size] += units;
         });
 
-        let summary4HTML = `
+        let summary4HTML = `<h3>Size-wise Analysis Summary</h3>
             <table class="summary-table">
                 <tr>
-                    <th>Size</th>
-                    <th>Category</th>
-                    <th>Units Sold</th>
-                    <th>% Share</th>
-                    <th>Category % Share</th>
-                    <th>Units in Stock</th>
-                </tr>
-        `;
-
+                    <th>Size</th><th>Category</th><th>Units Sold</th>
+                    <th>% Share</th><th>Category % Share</th><th>Units in Stock</th>
+                </tr>`;
         sizeOrder.forEach(size => {
             const sold = sizeSaleMap[size] || 0;
             const stock = sizeStockMap[size] || 0;
             const category = getSizeCategory(size);
-
-            const sizeShare = totalUnitsSold > 0
-                ? ((sold / totalUnitsSold) * 100).toFixed(2)
-                : "0.00";
-
-            const catShare = totalUnitsSold > 0
-                ? ((categorySaleMap[category] || 0) / totalUnitsSold * 100).toFixed(2)
-                : "0.00";
+            const sizeShare = totalUnitsSold > 0 ? ((sold / totalUnitsSold) * 100).toFixed(2) : "0.00";
+            const catShare = totalUnitsSold > 0 ? ((categorySaleMap[category] || 0) / totalUnitsSold * 100).toFixed(2) : "0.00";
 
             summary4HTML += `
                 <tr>
-                    <td>${size}</td>
-                    <td>${category}</td>
-                    <td>${sold}</td>
-                    <td>${sizeShare}%</td>
-                    <td>${catShare}%</td>
-                    <td>${stock}</td>
-                </tr>
-            `;
+                    <td>${size}</td><td>${category}</td><td>${sold}</td>
+                    <td>${sizeShare}%</td><td>${catShare}%</td><td>${stock}</td>
+                </tr>`;
         });
-
         summary4HTML += `</table>`;
         document.getElementById("summary4").innerHTML = summary4HTML;
 
@@ -238,7 +205,6 @@ document.addEventListener("google-ready", async () => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
             const remark = styleRemarkMap[style] || "Unmapped";
-
             if (!remarkSaleMap[remark]) remarkSaleMap[remark] = 0;
             remarkSaleMap[remark] += units;
         });
@@ -247,37 +213,20 @@ document.addEventListener("google-ready", async () => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
             const remark = styleRemarkMap[style] || "Unmapped";
-
             if (!remarkStockMap[remark]) remarkStockMap[remark] = 0;
             remarkStockMap[remark] += units;
         });
 
-        let summary5HTML = `
+        let summary5HTML = `<h3>Company Remark Wise Sale</h3>
             <table class="summary-table">
-                <tr>
-                    <th>Company Remark</th>
-                    <th>Total Units Sold</th>
-                    <th>DRR</th>
-                    <th>SC</th>
-                </tr>
-        `;
-
+                <tr><th>Company Remark</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
         Object.keys(remarkSaleMap).forEach(remark => {
             const sale = remarkSaleMap[remark];
             const stock = remarkStockMap[remark] || 0;
             const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
             const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
-
-            summary5HTML += `
-                <tr>
-                    <td>${remark}</td>
-                    <td>${sale}</td>
-                    <td>${drr.toFixed(2)}</td>
-                    <td>${sc}</td>
-                </tr>
-            `;
+            summary5HTML += `<tr><td>${remark}</td><td>${sale}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
-
         summary5HTML += `</table>`;
         document.getElementById("summary5").innerHTML = summary5HTML;
 
@@ -291,7 +240,6 @@ document.addEventListener("google-ready", async () => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
             const category = styleCategoryMap[style] || "Unmapped";
-
             if (!categorySaleFinal[category]) categorySaleFinal[category] = 0;
             categorySaleFinal[category] += units;
         });
@@ -300,46 +248,24 @@ document.addEventListener("google-ready", async () => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
             const category = styleCategoryMap[style] || "Unmapped";
-
             if (!categoryStockFinal[category]) categoryStockFinal[category] = 0;
             categoryStockFinal[category] += units;
         });
 
-        let summary6HTML = `
+        let summary6HTML = `<h3>Category Wise Sale</h3>
             <table class="summary-table">
-                <tr>
-                    <th>Category</th>
-                    <th>Total Units Sold</th>
-                    <th>DRR</th>
-                    <th>SC</th>
-                </tr>
-        `;
-
+                <tr><th>Category</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
         Object.keys(categorySaleFinal).forEach(category => {
             const sale = categorySaleFinal[category];
             const stock = categoryStockFinal[category] || 0;
             const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
             const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
-
-            summary6HTML += `
-                <tr>
-                    <td>${category}</td>
-                    <td>${sale}</td>
-                    <td>${drr.toFixed(2)}</td>
-                    <td>${sc}</td>
-                </tr>
-            `;
+            summary6HTML += `<tr><td>${category}</td><td>${sale}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
-
         summary6HTML += `</table>`;
         document.getElementById("summary6").innerHTML = summary6HTML;
 
     } catch (error) {
         console.error(error);
-        ["summary1","summary2","summary3","summary4","summary5","summary6"]
-            .forEach(id => {
-                document.getElementById(id).innerHTML =
-                    `<p style="color:red">Error loading summary</p>`;
-            });
     }
 });
