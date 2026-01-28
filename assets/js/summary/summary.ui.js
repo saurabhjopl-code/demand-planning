@@ -1,5 +1,5 @@
 // =====================================
-// SUMMARY LOGIC (1 → 6) — FINAL (FIXED MAPPING)
+// SUMMARY LOGIC (1 → 6) — RESTORED & FIXED
 // =====================================
 
 document.addEventListener("google-ready", async () => {
@@ -15,152 +15,199 @@ document.addEventListener("google-ready", async () => {
            SALE DAYS
         =============================== */
         const saleDaysMap = {};
-        saleDaysData.forEach(row => {
-            saleDaysMap[clean(row["Month"])] = Number(row["Days"]) || 0;
+        saleDaysData.forEach(r => {
+            saleDaysMap[clean(r["Month"])] = Number(r["Days"]) || 0;
         });
         const totalSaleDays = Object.values(saleDaysMap).reduce((a, b) => a + b, 0);
 
         /* ===============================
-           STYLE STATUS MAPS (FIXED)
+           STYLE STATUS MAPS
         =============================== */
         const styleRemarkMap = {};
         const styleCategoryMap = {};
 
-        styleStatusData.forEach(row => {
-            const style = clean(row["Style ID"]);
+        styleStatusData.forEach(r => {
+            const style = clean(r["Style ID"]);
             if (!style) return;
-
-            styleRemarkMap[style] = clean(row["Company Remark"]) || "Unmapped";
-            styleCategoryMap[style] = clean(row["Category"]) || "Unmapped";
+            styleRemarkMap[style] = clean(r["Company Remark"]);
+            styleCategoryMap[style] = clean(r["Category"]);
         });
 
         /* ===============================
            SUMMARY 1 – SALE DETAILS
         =============================== */
-        const monthSummary = {};
-        saleData.forEach(row => {
-            const month = clean(row["Month"]);
-            const units = Number(row["Units"]) || 0;
-            if (!monthSummary[month]) monthSummary[month] = 0;
-            monthSummary[month] += units;
+        const monthMap = {};
+        saleData.forEach(r => {
+            const m = clean(r["Month"]);
+            const u = Number(r["Units"]) || 0;
+            if (!monthMap[m]) monthMap[m] = 0;
+            monthMap[m] += u;
         });
 
-        let summary1HTML = `<h3>Sale Details</h3>
-            <table class="summary-table">
-                <tr><th>Month</th><th>Total Units Sold</th><th>DRR</th></tr>`;
-        Object.keys(monthSummary).forEach(month => {
-            const units = monthSummary[month];
-            const days = saleDaysMap[month] || 0;
-            const drr = days > 0 ? (units / days).toFixed(2) : "0.00";
-            summary1HTML += `<tr><td>${month}</td><td>${units}</td><td>${drr}</td></tr>`;
+        let html1 = `<h3>Sale Details</h3><table class="summary-table">
+            <tr><th>Month</th><th>Total Units Sold</th><th>DRR</th></tr>`;
+        Object.keys(monthMap).forEach(m => {
+            const drr = saleDaysMap[m] ? (monthMap[m] / saleDaysMap[m]).toFixed(2) : "0.00";
+            html1 += `<tr><td>${m}</td><td>${monthMap[m]}</td><td>${drr}</td></tr>`;
         });
-        summary1HTML += `</table>`;
-        document.getElementById("summary1").innerHTML = summary1HTML;
+        html1 += `</table>`;
+        summary1.innerHTML = html1;
 
         /* ===============================
            SUMMARY 2 – CURRENT FC STOCK
         =============================== */
-        const fcStockMap = {};
-        stockData.forEach(row => {
-            const fc = clean(row["FC"]);
-            const units = Number(row["Units"]) || 0;
+        const fcMap = {};
+        stockData.forEach(r => {
+            const fc = clean(r["FC"]);
+            const u = Number(r["Units"]) || 0;
             if (!fc) return;
-            if (!fcStockMap[fc]) fcStockMap[fc] = 0;
-            fcStockMap[fc] += units;
+            fcMap[fc] = (fcMap[fc] || 0) + u;
         });
 
-        let summary2HTML = `<h3>Current FC Stock</h3>
-            <table class="summary-table">
-                <tr><th>FC</th><th>Total Stock</th></tr>`;
-        Object.keys(fcStockMap).forEach(fc => {
-            summary2HTML += `<tr><td>${fc}</td><td>${fcStockMap[fc]}</td></tr>`;
+        let html2 = `<h3>Current FC Stock</h3><table class="summary-table">
+            <tr><th>FC</th><th>Total Stock</th></tr>`;
+        Object.keys(fcMap).forEach(fc => {
+            html2 += `<tr><td>${fc}</td><td>${fcMap[fc]}</td></tr>`;
         });
-        summary2HTML += `</table>`;
-        document.getElementById("summary2").innerHTML = summary2HTML;
+        html2 += `</table>`;
+        summary2.innerHTML = html2;
 
         /* ===============================
-           COMMON STYLE MAPS (CLEANED)
+           COMMON STYLE MAPS
         =============================== */
-        const styleSaleMap = {};
-        const styleStockMap = {};
+        const styleSale = {};
+        const styleStock = {};
 
-        saleData.forEach(row => {
-            const style = clean(row["Style ID"]);
-            const units = Number(row["Units"]) || 0;
-            if (!style) return;
-            if (!styleSaleMap[style]) styleSaleMap[style] = 0;
-            styleSaleMap[style] += units;
+        saleData.forEach(r => {
+            const s = clean(r["Style ID"]);
+            const u = Number(r["Units"]) || 0;
+            if (!s) return;
+            styleSale[s] = (styleSale[s] || 0) + u;
         });
 
-        stockData.forEach(row => {
-            const style = clean(row["Style ID"]);
-            const units = Number(row["Units"]) || 0;
-            if (!style) return;
-            if (!styleStockMap[style]) styleStockMap[style] = 0;
-            styleStockMap[style] += units;
+        stockData.forEach(r => {
+            const s = clean(r["Style ID"]);
+            const u = Number(r["Units"]) || 0;
+            if (!s) return;
+            styleStock[s] = (styleStock[s] || 0) + u;
         });
+
+        /* ===============================
+           SUMMARY 3 – SC BAND SUMMARY
+        =============================== */
+        const bands = {
+            "0–30": { styles: new Set(), units: 0 },
+            "30–60": { styles: new Set(), units: 0 },
+            "60–120": { styles: new Set(), units: 0 },
+            "120+": { styles: new Set(), units: 0 }
+        };
+
+        Object.keys(styleSale).forEach(s => {
+            const drr = totalSaleDays ? styleSale[s] / totalSaleDays : 0;
+            const sc = drr ? (styleStock[s] || 0) / drr : 0;
+            let band = "120+";
+            if (sc <= 30) band = "0–30";
+            else if (sc <= 60) band = "30–60";
+            else if (sc <= 120) band = "60–120";
+            bands[band].styles.add(s);
+            bands[band].units += styleSale[s];
+        });
+
+        let html3 = `<h3>SC Band Summary</h3><table class="summary-table">
+            <tr><th>Band</th><th>Styles</th><th>Total Units Sold</th></tr>`;
+        Object.keys(bands).forEach(b => {
+            html3 += `<tr><td>${b}</td><td>${bands[b].styles.size}</td><td>${bands[b].units}</td></tr>`;
+        });
+        html3 += `</table>`;
+        summary3.innerHTML = html3;
+
+        /* ===============================
+           SUMMARY 4 – SIZE WISE ANALYSIS
+        =============================== */
+        const sizeOrder = ["FS","S","M","L","XL","XXL","3XL","4XL","5XL","6XL","7XL","8XL","9XL","10XL"];
+        const sizeSale = {}, sizeStock = {};
+        let totalSale = 0;
+
+        saleData.forEach(r => {
+            const sz = clean(r["Size"]);
+            const u = Number(r["Units"]) || 0;
+            if (!sz) return;
+            sizeSale[sz] = (sizeSale[sz] || 0) + u;
+            totalSale += u;
+        });
+
+        stockData.forEach(r => {
+            const sz = clean(r["Size"]);
+            const u = Number(r["Units"]) || 0;
+            if (!sz) return;
+            sizeStock[sz] = (sizeStock[sz] || 0) + u;
+        });
+
+        const sizeCat = sz => {
+            if (sz === "FS") return "FS";
+            if (["S","M","L","XL","XXL"].includes(sz)) return "Normal";
+            if (["3XL","4XL","5XL","6XL"].includes(sz)) return "PLUS 1";
+            return "PLUS 2";
+        };
+
+        let html4 = `<h3>Size-wise Analysis Summary</h3><table class="summary-table">
+            <tr><th>Size</th><th>Category</th><th>Units Sold</th><th>% Share</th><th>Units in Stock</th></tr>`;
+        sizeOrder.forEach(sz => {
+            const sold = sizeSale[sz] || 0;
+            html4 += `<tr>
+                <td>${sz}</td>
+                <td>${sizeCat(sz)}</td>
+                <td>${sold}</td>
+                <td>${totalSale ? ((sold/totalSale)*100).toFixed(2) : "0.00"}%</td>
+                <td>${sizeStock[sz] || 0}</td>
+            </tr>`;
+        });
+        html4 += `</table>`;
+        summary4.innerHTML = html4;
 
         /* ===============================
            SUMMARY 5 – COMPANY REMARK
         =============================== */
-        const remarkSaleMap = {};
-        const remarkStockMap = {};
-
-        Object.keys(styleSaleMap).forEach(style => {
-            const remark = styleRemarkMap[style];
-            if (!remark) return;
-
-            if (!remarkSaleMap[remark]) remarkSaleMap[remark] = 0;
-            remarkSaleMap[remark] += styleSaleMap[style];
-
-            if (!remarkStockMap[remark]) remarkStockMap[remark] = 0;
-            remarkStockMap[remark] += styleStockMap[style] || 0;
+        const remarkSale = {}, remarkStock = {};
+        Object.keys(styleSale).forEach(s => {
+            const r = styleRemarkMap[s];
+            if (!r) return;
+            remarkSale[r] = (remarkSale[r] || 0) + styleSale[s];
+            remarkStock[r] = (remarkStock[r] || 0) + (styleStock[s] || 0);
         });
 
-        let summary5HTML = `<h3>Company Remark Wise Sale</h3>
-            <table class="summary-table">
-                <tr><th>Company Remark</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
-        Object.keys(remarkSaleMap).forEach(remark => {
-            const sale = remarkSaleMap[remark];
-            const stock = remarkStockMap[remark] || 0;
-            const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
-            const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
-            summary5HTML += `<tr><td>${remark}</td><td>${sale}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
+        let html5 = `<h3>Company Remark Wise Sale</h3><table class="summary-table">
+            <tr><th>Company Remark</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
+        Object.keys(remarkSale).forEach(r => {
+            const drr = totalSaleDays ? remarkSale[r]/totalSaleDays : 0;
+            const sc = drr ? (remarkStock[r]/drr).toFixed(2) : "0.00";
+            html5 += `<tr><td>${r}</td><td>${remarkSale[r]}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
-        summary5HTML += `</table>`;
-        document.getElementById("summary5").innerHTML = summary5HTML;
+        html5 += `</table>`;
+        summary5.innerHTML = html5;
 
         /* ===============================
            SUMMARY 6 – CATEGORY WISE SALE
         =============================== */
-        const categorySaleMap = {};
-        const categoryStockMap = {};
-
-        Object.keys(styleSaleMap).forEach(style => {
-            const category = styleCategoryMap[style];
-            if (!category) return;
-
-            if (!categorySaleMap[category]) categorySaleMap[category] = 0;
-            categorySaleMap[category] += styleSaleMap[style];
-
-            if (!categoryStockMap[category]) categoryStockMap[category] = 0;
-            categoryStockMap[category] += styleStockMap[style] || 0;
+        const catSale = {}, catStock = {};
+        Object.keys(styleSale).forEach(s => {
+            const c = styleCategoryMap[s];
+            if (!c) return;
+            catSale[c] = (catSale[c] || 0) + styleSale[s];
+            catStock[c] = (catStock[c] || 0) + (styleStock[s] || 0);
         });
 
-        let summary6HTML = `<h3>Category Wise Sale</h3>
-            <table class="summary-table">
-                <tr><th>Category</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
-        Object.keys(categorySaleMap).forEach(category => {
-            const sale = categorySaleMap[category];
-            const stock = categoryStockMap[category] || 0;
-            const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
-            const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
-            summary6HTML += `<tr><td>${category}</td><td>${sale}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
+        let html6 = `<h3>Category Wise Sale</h3><table class="summary-table">
+            <tr><th>Category</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
+        Object.keys(catSale).forEach(c => {
+            const drr = totalSaleDays ? catSale[c]/totalSaleDays : 0;
+            const sc = drr ? (catStock[c]/drr).toFixed(2) : "0.00";
+            html6 += `<tr><td>${c}</td><td>${catSale[c]}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
-        summary6HTML += `</table>`;
-        document.getElementById("summary6").innerHTML = summary6HTML;
+        html6 += `</table>`;
+        summary6.innerHTML = html6;
 
-    } catch (error) {
-        console.error(error);
+    } catch (e) {
+        console.error(e);
     }
 });
