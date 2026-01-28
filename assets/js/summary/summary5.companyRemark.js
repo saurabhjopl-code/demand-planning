@@ -1,96 +1,85 @@
 document.addEventListener("google-ready", async () => {
-  try {
-    const sale = await fetchSheet("Sale");
-    const stock = await fetchSheet("Stock");
-    const styleStatus = await fetchSheet("Style Status");
+  const sale = await fetchSheet("Sale");
+  const stock = await fetchSheet("Stock");
+  const styleStatus = await fetchSheet("Style Status");
 
-    const N = v => v == null ? "" : String(v).trim();
+  const N = v => v == null ? "" : String(v).trim();
 
-    /* ===============================
-       STEP 1: SALE BY STYLE
-    =============================== */
-    const saleByStyle = {};
-    sale.forEach(r => {
-      const style = N(r["Style ID"]);
-      const units = Number(r["Units"]) || 0;
-      if (!style) return;
-      saleByStyle[style] = (saleByStyle[style] || 0) + units;
-    });
+  /* ===============================
+     1. SALE & STOCK LOOKUPS
+  =============================== */
+  const saleByStyle = {};
+  sale.forEach(r => {
+    const s = N(r["Style ID"]);
+    saleByStyle[s] = (saleByStyle[s] || 0) + (Number(r["Units"]) || 0);
+  });
 
-    /* ===============================
-       STEP 2: STOCK BY STYLE
-    =============================== */
-    const stockByStyle = {};
-    stock.forEach(r => {
-      const style = N(r["Style ID"]);
-      const units = Number(r["Units"]) || 0;
-      if (!style) return;
-      stockByStyle[style] = (stockByStyle[style] || 0) + units;
-    });
+  const stockByStyle = {};
+  stock.forEach(r => {
+    const s = N(r["Style ID"]);
+    stockByStyle[s] = (stockByStyle[s] || 0) + (Number(r["Units"]) || 0);
+  });
 
-    /* ===============================
-       STEP 3: PIVOT FROM STYLE STATUS
-    =============================== */
-    const result = {};
-    let grandTotalSale = 0;
+  /* ===============================
+     2. PIVOT FROM STYLE STATUS
+  =============================== */
+  const result = {};
+  let grandTotalSale = 0;
 
-    styleStatus.forEach(r => {
-      const style = N(r["Style ID"]);
-      const remark = N(r["Company Remark"]) || "UNMAPPED";
+  styleStatus.forEach(r => {
+    const style = N(r["Style ID"]);
+    const remark = N(r["Company Remark"]);
 
-      if (!style) return;
+    if (!style) return;
 
-      const styleSale = saleByStyle[style] || 0;
-      const styleStock = stockByStyle[style] || 0;
+    const saleQty = saleByStyle[style] || 0;
+    const stockQty = stockByStyle[style] || 0;
 
-      if (!result[remark]) {
-        result[remark] = {
-          styles: new Set(),
-          totalSale: 0,
-          totalStock: 0
-        };
-      }
+    if (!result[remark]) {
+      result[remark] = {
+        styles: new Set(),
+        sale: 0,
+        stock: 0
+      };
+    }
 
-      result[remark].styles.add(style);
-      result[remark].totalSale += styleSale;
-      result[remark].totalStock += styleStock;
-      grandTotalSale += styleSale;
-    });
+    result[remark].styles.add(style);
+    result[remark].sale += saleQty;
+    result[remark].stock += stockQty;
 
-    /* ===============================
-       STEP 4: RENDER
-    =============================== */
-    let html = `
-      <h3>Company Remark Wise Sale</h3>
-      <table class="summary-table">
-        <tr>
-          <th>Company Remark</th>
-          <th>No of Styles</th>
-          <th>Total Sale</th>
-          <th>Sale Contribution %</th>
-          <th>Total Stock</th>
-        </tr>`;
+    grandTotalSale += saleQty;
+  });
 
-    Object.keys(result).forEach(remark => {
-      const sale = result[remark].totalSale;
-      const pct = grandTotalSale
-        ? ((sale / grandTotalSale) * 100).toFixed(2)
-        : "0.00";
+  /* ===============================
+     3. RENDER
+  =============================== */
+  let html = `
+    <h3>Company Remark Wise Sale</h3>
+    <table class="summary-table">
+      <tr>
+        <th>Company Remark</th>
+        <th>Count of Style ID</th>
+        <th>Sum of Total Sale</th>
+        <th>Sale Contribution %</th>
+        <th>Sum of Total Stock</th>
+      </tr>`;
 
-      html += `
-        <tr>
-          <td>${remark}</td>
-          <td>${result[remark].styles.size}</td>
-          <td>${sale}</td>
-          <td>${pct}%</td>
-          <td>${result[remark].totalStock}</td>
-        </tr>`;
-    });
+  Object.keys(result).forEach(r => {
+    const sale = result[r].sale;
+    const pct = grandTotalSale
+      ? ((sale / grandTotalSale) * 100).toFixed(2)
+      : "0.00";
 
-    html += `</table>`;
-    document.getElementById("summary5").innerHTML = html;
+    html += `
+      <tr>
+        <td>${r}</td>
+        <td>${result[r].styles.size}</td>
+        <td>${sale}</td>
+        <td>${pct}%</td>
+        <td>${result[r].stock}</td>
+      </tr>`;
+  });
 
-  } catch (err) {
-    console.error("Summary 5 error:", err);
-  }
+  html += `</table>`;
+  document.getElementById("summary5").innerHTML = html;
 });
