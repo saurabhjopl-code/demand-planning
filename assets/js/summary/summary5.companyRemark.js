@@ -2,60 +2,86 @@ document.addEventListener("google-ready", async () => {
   try {
     const sale = await fetchSheet("Sale");
     const stock = await fetchSheet("Stock");
-    const saleDays = await fetchSheet("Sale Days");
-    const ss = await fetchSheet("Style Status");
+    const styleStatus = await fetchSheet("Style Status");
 
     const N = v => v == null ? "" : String(v).trim();
 
-    // 🔑 FIND CORRECT COMPANY REMARK COLUMN
-    const remarkKey = Object.keys(ss[0]).find(
-      k => k.trim().toLowerCase() === "company remark"
-    );
+    /* ===============================
+       DETECT HEADERS SAFELY
+    =============================== */
+    const headers = Object.keys(styleStatus[0]);
+    const styleKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "styleid");
+    const remarkKey = headers.find(h => h.replace(/\s+/g,"").toLowerCase() === "companyremark");
 
-    if (!remarkKey) {
+    if (!styleKey || !remarkKey) {
       document.getElementById("summary5").innerHTML =
-        "<b style='color:red'>Company Remark column not found in Style Status</b>";
+        "<b style='color:red'>Style ID / Company Remark column not detected</b>";
       return;
     }
 
-    const totalDays = saleDays.reduce((a,r)=>a+(Number(r.Days)||0),0);
-
+    /* ===============================
+       STYLE → REMARK MAP
+    =============================== */
     const remarkMap = {};
-    ss.forEach(r => {
-      remarkMap[N(r["Style ID"])] = N(r[remarkKey]);
+    styleStatus.forEach(r => {
+      const style = N(r[styleKey]);
+      if (style) remarkMap[style] = N(r[remarkKey]) || "UNMAPPED";
     });
 
+    /* ===============================
+       SALE & STOCK BY STYLE
+    =============================== */
     const saleByStyle = {};
+    const stockByStyle = {};
+
     sale.forEach(r => {
       const s = N(r["Style ID"]);
-      saleByStyle[s] = (saleByStyle[s]||0) + (Number(r.Units)||0);
+      saleByStyle[s] = (saleByStyle[s] || 0) + (Number(r["Units"]) || 0);
     });
 
-    const stockByStyle = {};
     stock.forEach(r => {
       const s = N(r["Style ID"]);
-      stockByStyle[s] = (stockByStyle[s]||0) + (Number(r.Units)||0);
+      stockByStyle[s] = (stockByStyle[s] || 0) + (Number(r["Units"]) || 0);
     });
 
+    const totalSale = Object.values(saleByStyle).reduce((a,b)=>a+b,0);
+
+    /* ===============================
+       AGGREGATE BY COMPANY REMARK
+    =============================== */
     const result = {};
-    Object.keys(saleByStyle).forEach(s => {
-      const remark = remarkMap[s] || "UNMAPPED";
-      if (!result[remark]) result[remark] = {sale:0, stock:0};
-      result[remark].sale += saleByStyle[s];
-      result[remark].stock += stockByStyle[s]||0;
+
+    Object.keys(saleByStyle).forEach(style => {
+      const remark = remarkMap[style] || "UNMAPPED";
+      if (!result[remark]) {
+        result[remark] = { styles:new Set(), sale:0, stock:0 };
+      }
+      result[remark].styles.add(style);
+      result[remark].sale += saleByStyle[style];
+      result[remark].stock += stockByStyle[style] || 0;
     });
 
+    /* ===============================
+       RENDER
+    =============================== */
     let html = `<h3>Company Remark Wise Sale</h3>
       <table class="summary-table">
-        <tr><th>Company Remark</th><th>Total Units Sold</th><th>DRR</th><th>SC</th></tr>`;
+        <tr>
+          <th>Company Remark</th>
+          <th>No of Styles</th>
+          <th>Total Sale</th>
+          <th>Sale Contribution %</th>
+          <th>Total Stock</th>
+        </tr>`;
 
     Object.keys(result).forEach(r => {
-      const drr = totalDays ? result[r].sale/totalDays : 0;
+      const pct = totalSale ? ((result[r].sale / totalSale) * 100).toFixed(2) : "0.00";
       html += `<tr>
         <td>${r}</td>
+        <td>${result[r].styles.size}</td>
         <td>${result[r].sale}</td>
-        <td>${drr.toFixed(2)}</td>
-        <td>${drr ? (result[r].stock/drr).toFixed(2) : "0.00"}</td>
+        <td>${pct}%</td>
+        <td>${result[r].stock}</td>
       </tr>`;
     });
 
@@ -63,6 +89,6 @@ document.addEventListener("google-ready", async () => {
     summary5.innerHTML = html;
 
   } catch (e) {
-    console.error(e);
+    console.error("Summary 5 error:", e);
   }
 });
