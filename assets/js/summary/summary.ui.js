@@ -1,5 +1,5 @@
 // =====================================
-// SUMMARY LOGIC (1 → 5)
+// SUMMARY LOGIC (1 → 6) — FINAL
 // =====================================
 
 document.addEventListener("google-ready", async () => {
@@ -24,13 +24,17 @@ document.addEventListener("google-ready", async () => {
             .reduce((a, b) => a + b, 0);
 
         /* ===============================
-           STYLE → COMPANY REMARK MAP
+           STYLE MAPS
         =============================== */
         const styleRemarkMap = {};
+        const styleCategoryMap = {};
+
         styleStatusData.forEach(row => {
             const style = row["Style ID"];
-            const remark = row["Company Remark"] || "Unmapped";
-            if (style) styleRemarkMap[style] = remark;
+            if (!style) return;
+
+            styleRemarkMap[style] = row["Company Remark"] || "Unmapped";
+            styleCategoryMap[style] = row["Category"] || "Unmapped";
         });
 
         /* ===============================
@@ -83,6 +87,8 @@ document.addEventListener("google-ready", async () => {
            SUMMARY 3 – SC BAND SUMMARY
         =============================== */
         const styleSaleMap = {};
+        const styleStockMap = {};
+
         saleData.forEach(row => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
@@ -91,7 +97,6 @@ document.addEventListener("google-ready", async () => {
             styleSaleMap[style] += units;
         });
 
-        const styleStockMap = {};
         stockData.forEach(row => {
             const style = row["Style ID"];
             const units = Number(row["Units"]) || 0;
@@ -147,7 +152,7 @@ document.addEventListener("google-ready", async () => {
             "7XL","8XL","9XL","10XL"
         ];
 
-        const getCategory = size => {
+        const getSizeCategory = size => {
             if (size === "FS") return "FS";
             if (["S","M","L","XL","XXL"].includes(size)) return "Normal";
             if (["3XL","4XL","5XL","6XL"].includes(size)) return "PLUS 1";
@@ -168,7 +173,7 @@ document.addEventListener("google-ready", async () => {
             sizeSaleMap[size] += units;
             totalUnitsSold += units;
 
-            const cat = getCategory(size);
+            const cat = getSizeCategory(size);
             if (!categorySaleMap[cat]) categorySaleMap[cat] = 0;
             categorySaleMap[cat] += units;
         });
@@ -198,7 +203,7 @@ document.addEventListener("google-ready", async () => {
         sizeOrder.forEach(size => {
             const sold = sizeSaleMap[size] || 0;
             const stock = sizeStockMap[size] || 0;
-            const category = getCategory(size);
+            const category = getSizeCategory(size);
 
             const sizeShare = totalUnitsSold > 0
                 ? ((sold / totalUnitsSold) * 100).toFixed(2)
@@ -224,7 +229,7 @@ document.addEventListener("google-ready", async () => {
         document.getElementById("summary4").innerHTML = summary4HTML;
 
         /* ===============================
-           SUMMARY 5 – COMPANY REMARK WISE
+           SUMMARY 5 – COMPANY REMARK
         =============================== */
         const remarkSaleMap = {};
         const remarkStockMap = {};
@@ -276,11 +281,65 @@ document.addEventListener("google-ready", async () => {
         summary5HTML += `</table>`;
         document.getElementById("summary5").innerHTML = summary5HTML;
 
+        /* ===============================
+           SUMMARY 6 – CATEGORY WISE SALE
+        =============================== */
+        const categorySaleFinal = {};
+        const categoryStockFinal = {};
+
+        saleData.forEach(row => {
+            const style = row["Style ID"];
+            const units = Number(row["Units"]) || 0;
+            const category = styleCategoryMap[style] || "Unmapped";
+
+            if (!categorySaleFinal[category]) categorySaleFinal[category] = 0;
+            categorySaleFinal[category] += units;
+        });
+
+        stockData.forEach(row => {
+            const style = row["Style ID"];
+            const units = Number(row["Units"]) || 0;
+            const category = styleCategoryMap[style] || "Unmapped";
+
+            if (!categoryStockFinal[category]) categoryStockFinal[category] = 0;
+            categoryStockFinal[category] += units;
+        });
+
+        let summary6HTML = `
+            <table class="summary-table">
+                <tr>
+                    <th>Category</th>
+                    <th>Total Units Sold</th>
+                    <th>DRR</th>
+                    <th>SC</th>
+                </tr>
+        `;
+
+        Object.keys(categorySaleFinal).forEach(category => {
+            const sale = categorySaleFinal[category];
+            const stock = categoryStockFinal[category] || 0;
+            const drr = totalSaleDays > 0 ? sale / totalSaleDays : 0;
+            const sc = drr > 0 ? (stock / drr).toFixed(2) : "0.00";
+
+            summary6HTML += `
+                <tr>
+                    <td>${category}</td>
+                    <td>${sale}</td>
+                    <td>${drr.toFixed(2)}</td>
+                    <td>${sc}</td>
+                </tr>
+            `;
+        });
+
+        summary6HTML += `</table>`;
+        document.getElementById("summary6").innerHTML = summary6HTML;
+
     } catch (error) {
         console.error(error);
-        ["summary1","summary2","summary3","summary4","summary5"].forEach(id => {
-            document.getElementById(id).innerHTML =
-                `<p style="color:red">Error loading summary</p>`;
-        });
+        ["summary1","summary2","summary3","summary4","summary5","summary6"]
+            .forEach(id => {
+                document.getElementById(id).innerHTML =
+                    `<p style="color:red">Error loading summary</p>`;
+            });
     }
 });
