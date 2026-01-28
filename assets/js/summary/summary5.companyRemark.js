@@ -1,61 +1,35 @@
 document.addEventListener("google-ready", async () => {
-  try {
-    const styleStatus = await fetchSheet("Style Status");
+  const styleStatusRaw = await fetchSheet("Style Status");
 
-    const N = v => v == null ? "" : String(v).trim();
+  const result = {};
 
-    /* ===============================
-       DEBUG: LOG FIRST ROW
-       (OPEN CONSOLE TO SEE THIS)
-    =============================== */
-    console.log("Style Status sample row:", styleStatus[0]);
-    console.log("Style Status values:", Object.values(styleStatus[0]));
+  styleStatusRaw.forEach(r => {
+    const row = normalizeRow(r);
 
-    /* ===============================
-       COUNT STYLES BY COMPANY REMARK
-       USING COLUMN POSITION
-       A = Style ID
-       B = Category
-       C = Company Remark
-    =============================== */
-    const result = {};
+    const styleId = row.styleid;
+    const remark = row.companyremark || "UNMAPPED";
 
-    styleStatus.forEach(row => {
-      const vals = Object.values(row);
+    if (!styleId) return;
 
-      const styleId = N(vals[0]);   // Column A
-      const companyRemark = N(vals[2]); // Column C
+    result[remark] = (result[remark] || 0) + 1;
+  });
 
-      if (!styleId) return;
+  let html = `
+    <h3>Company Remark Wise (COUNT ONLY)</h3>
+    <table class="summary-table">
+      <tr>
+        <th>Company Remark</th>
+        <th>Count of Style ID</th>
+      </tr>`;
 
-      const key = companyRemark || "UNMAPPED";
+  Object.keys(result).forEach(k => {
+    html += `
+      <tr>
+        <td>${k}</td>
+        <td>${result[k]}</td>
+      </tr>`;
+  });
 
-      result[key] = (result[key] || 0) + 1;
-    });
-
-    /* ===============================
-       RENDER (COUNT ONLY)
-    =============================== */
-    let html = `
-      <h3>Company Remark Wise (DEBUG – COUNT ONLY)</h3>
-      <table class="summary-table">
-        <tr>
-          <th>Company Remark</th>
-          <th>Count of Style ID</th>
-        </tr>`;
-
-    Object.keys(result).forEach(k => {
-      html += `
-        <tr>
-          <td>${k}</td>
-          <td>${result[k]}</td>
-        </tr>`;
-    });
-
-    html += `</table>`;
-    document.getElementById("summary5").innerHTML = html;
-
-  } catch (e) {
-    console.error("Summary 5 DEBUG failed:", e);
-  }
+  html += `</table>`;
+  document.getElementById("summary5").innerHTML = html;
 });
