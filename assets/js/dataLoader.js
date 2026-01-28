@@ -1,52 +1,96 @@
-// ===============================
-// Google Sheet Data Loader
-// Uses Google Visualization API
-// ===============================
+/* =========================================================
+   dataLoader.js
+   PURPOSE:
+   - Fetch Google Sheets data (public sheet)
+   - Normalize headers safely
+   - Provide stable data to all summaries & reports
+   ========================================================= */
 
-const SHEET_ID = "1kGUn-Sdp16NJB9rLjijrYnnSl9Jjrom5ZpYiTXFBZ1E";
+/* ===============================
+   CONFIG
+=============================== */
+const GOOGLE_SHEET_ID = "1kGUn-Sdp16NJB9rLjijrYnnSl9Jjrom5ZpYiTXFBZ1E";
 
-function fetchSheet(sheetName) {
-    return new Promise((resolve, reject) => {
-        const query = new google.visualization.Query(
-            `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?sheet=${encodeURIComponent(sheetName)}`
-        );
+/* ===============================
+   INTERNAL CACHE
+=============================== */
+const sheetCache = {};
 
-        query.send(response => {
-            if (response.isError()) {
-                reject(response.getMessage());
-                return;
-            }
-
-            const data = response.getDataTable();
-            const cols = [];
-            const rows = [];
-
-            for (let c = 0; c < data.getNumberOfColumns(); c++) {
-                cols.push(data.getColumnLabel(c));
-            }
-
-            for (let r = 0; r < data.getNumberOfRows(); r++) {
-                const row = {};
-                cols.forEach((col, cIndex) => {
-                    row[col] = data.getValue(r, cIndex);
-                });
-                rows.push(row);
-            }
-
-            resolve(rows);
-        });
-    });
+/* ===============================
+   HELPER: Normalize Headers
+   "Style ID" -> styleid
+   "Company Remark" -> companyremark
+=============================== */
+function normalizeRow(row) {
+  const normalized = {};
+  Object.keys(row).forEach(key => {
+    const cleanKey = key
+      .toLowerCase()
+      .replace(/\s+/g, "")
+      .replace(/[^a-z0-9]/g, "");
+    normalized[cleanKey] = row[key];
+  });
+  return normalized;
 }
 
-// Load Google Visualization API
-(function loadGoogleAPI() {
-    const script = document.createElement("script");
-    script.src = "https://www.gstatic.com/charts/loader.js";
-    script.onload = () => {
-        google.charts.load("current", { packages: ["corechart"] });
-        google.charts.setOnLoadCallback(() => {
-            document.dispatchEvent(new Event("google-ready"));
-        });
-    };
-    document.head.appendChild(script);
-})();
+/* ===============================
+   FETCH SHEET USING GVIZ
+=============================== */
+async function fetchSheet(sheetName) {
+  // Return from cache if available
+  if (sheetCache[sheetName]) {
+    return sheetCache[sheetName];
+  }
+
+  const url =
+    `https://docs.google.com/spreadsheets/d/${GOOGLE_SHEET_ID}/gviz/tq?` +
+    `tqx=out:json&sheet=${encodeURIComponent(sheetName)}`;
+
+  const response = await fetch(url);
+  const text = await response.text();
+
+  // GVIZ returns JS wrapped JSON → extract JSON
+  const json = JSON.parse(
+    text.substring(text.indexOf("{"), text.lastIndexOf("}") + 1)
+  );
+
+  const table = json.table;
+  const headers = table.cols.map(col => col.label);
+  const rows = table.rows;
+
+  const data = rows.map(row => {
+    const obj = {};
+    row.c.forEach((cell, i) => {
+      obj[headers[i]] = cell ? cell.v : "";
+    });
+    return obj;
+  });
+
+  sheetCache[sheetName] = data;
+  return data;
+}
+
+/* ===============================
+   LOAD ALL REQUIRED SHEETS
+=============================== */
+async function loadAllSheets() {
+  try {
+    await Promise.all([
+      fetchSheet("Sale"),
+      fetchSheet("Stock"),
+      fetchSheet("Style Status"),
+      fetchSheet("Sale Days")
+    ]);
+
+    // Fire global ready event
+    document.dispatchEvent(new Event("google-ready"));
+
+  } catch (err) {
+    console.error("❌ Failed to load Google Sheets:", err);
+  }
+}
+
+/* ===============================
+   AUTO LOAD ON PAGE LOAD
+=============================== */
+document.addEventListener("DOMContentLoaded", loadAllSheets);
