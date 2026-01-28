@@ -21,10 +21,7 @@ document.addEventListener("DOMContentLoaded", () => {
       const table = container.querySelector("table");
       if (!table) return;
 
-      const ws = XLSX.utils.table_to_sheet(table, {
-        raw: true
-      });
-
+      const ws = XLSX.utils.table_to_sheet(table, { raw: true });
       XLSX.utils.book_append_sheet(wb, ws, s.name);
     });
 
