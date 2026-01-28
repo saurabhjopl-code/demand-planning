@@ -1,5 +1,5 @@
 // =====================================
-// SUMMARY LOGIC (1 → 6) — RESTORED & FIXED
+// SUMMARY LOGIC (1 → 6) — FINAL, STABLE
 // =====================================
 
 document.addEventListener("google-ready", async () => {
@@ -25,7 +25,6 @@ document.addEventListener("google-ready", async () => {
         =============================== */
         const styleRemarkMap = {};
         const styleCategoryMap = {};
-
         styleStatusData.forEach(r => {
             const style = clean(r["Style ID"]);
             if (!style) return;
@@ -40,8 +39,7 @@ document.addEventListener("google-ready", async () => {
         saleData.forEach(r => {
             const m = clean(r["Month"]);
             const u = Number(r["Units"]) || 0;
-            if (!monthMap[m]) monthMap[m] = 0;
-            monthMap[m] += u;
+            monthMap[m] = (monthMap[m] || 0) + u;
         });
 
         let html1 = `<h3>Sale Details</h3><table class="summary-table">
@@ -51,7 +49,7 @@ document.addEventListener("google-ready", async () => {
             html1 += `<tr><td>${m}</td><td>${monthMap[m]}</td><td>${drr}</td></tr>`;
         });
         html1 += `</table>`;
-        summary1.innerHTML = html1;
+        document.getElementById("summary1").innerHTML = html1;
 
         /* ===============================
            SUMMARY 2 – CURRENT FC STOCK
@@ -70,21 +68,19 @@ document.addEventListener("google-ready", async () => {
             html2 += `<tr><td>${fc}</td><td>${fcMap[fc]}</td></tr>`;
         });
         html2 += `</table>`;
-        summary2.innerHTML = html2;
+        document.getElementById("summary2").innerHTML = html2;
 
         /* ===============================
            COMMON STYLE MAPS
         =============================== */
         const styleSale = {};
         const styleStock = {};
-
         saleData.forEach(r => {
             const s = clean(r["Style ID"]);
             const u = Number(r["Units"]) || 0;
             if (!s) return;
             styleSale[s] = (styleSale[s] || 0) + u;
         });
-
         stockData.forEach(r => {
             const s = clean(r["Style ID"]);
             const u = Number(r["Units"]) || 0;
@@ -119,7 +115,7 @@ document.addEventListener("google-ready", async () => {
             html3 += `<tr><td>${b}</td><td>${bands[b].styles.size}</td><td>${bands[b].units}</td></tr>`;
         });
         html3 += `</table>`;
-        summary3.innerHTML = html3;
+        document.getElementById("summary3").innerHTML = html3;
 
         /* ===============================
            SUMMARY 4 – SIZE WISE ANALYSIS
@@ -135,7 +131,6 @@ document.addEventListener("google-ready", async () => {
             sizeSale[sz] = (sizeSale[sz] || 0) + u;
             totalSale += u;
         });
-
         stockData.forEach(r => {
             const sz = clean(r["Size"]);
             const u = Number(r["Units"]) || 0;
@@ -163,7 +158,7 @@ document.addEventListener("google-ready", async () => {
             </tr>`;
         });
         html4 += `</table>`;
-        summary4.innerHTML = html4;
+        document.getElementById("summary4").innerHTML = html4;
 
         /* ===============================
            SUMMARY 5 – COMPANY REMARK
@@ -184,7 +179,7 @@ document.addEventListener("google-ready", async () => {
             html5 += `<tr><td>${r}</td><td>${remarkSale[r]}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
         html5 += `</table>`;
-        summary5.innerHTML = html5;
+        document.getElementById("summary5").innerHTML = html5;
 
         /* ===============================
            SUMMARY 6 – CATEGORY WISE SALE
@@ -205,9 +200,9 @@ document.addEventListener("google-ready", async () => {
             html6 += `<tr><td>${c}</td><td>${catSale[c]}</td><td>${drr.toFixed(2)}</td><td>${sc}</td></tr>`;
         });
         html6 += `</table>`;
-        summary6.innerHTML = html6;
+        document.getElementById("summary6").innerHTML = html6;
 
-    } catch (e) {
-        console.error(e);
+    } catch (err) {
+        console.error("Summary load failed:", err);
     }
 });
