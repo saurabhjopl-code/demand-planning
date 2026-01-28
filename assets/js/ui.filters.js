@@ -1,110 +1,134 @@
 document.addEventListener("google-ready", () => {
-  renderFilterUI();
-  populateFilterOptions();
+  renderFilterChips();
+  populateChipOptions();
 });
 
-function renderFilterUI() {
+/* =========================
+   FILTER CHIP UI
+========================= */
+
+function renderFilterChips() {
   const container = document.getElementById("filters");
   if (!container) return;
 
   container.innerHTML = `
-    <div class="filter-card">
-      <div class="filter-title">Filters</div>
+    <div class="filter-chip-card">
+      <div class="filter-chip-title">Select Filters</div>
 
-      <div class="filter-grid">
-        <div class="filter-item">
-          <label>Month</label>
-          <select id="filterMonth" multiple></select>
+      <div class="filter-chip-row">
+        ${chip("month", "Month")}
+        ${chip("fc", "FC")}
+        ${chip("mp", "MP")}
+        ${chip("account", "Account")}
+
+        <div class="filter-chip-input">
+          <input id="filterStyle" type="text" placeholder="Search Style ID" />
         </div>
 
-        <div class="filter-item">
-          <label>FC</label>
-          <select id="filterFC" multiple></select>
-        </div>
-
-        <div class="filter-item">
-          <label>Marketplace</label>
-          <select id="filterMP" multiple></select>
-        </div>
-
-        <div class="filter-item">
-          <label>Account</label>
-          <select id="filterAccount" multiple></select>
-        </div>
-
-        <div class="filter-item">
-          <label>Style ID</label>
-          <input
-            id="filterStyle"
-            type="text"
-            placeholder="Search Style ID"
-          />
-        </div>
+        <button class="filter-reset" id="resetFilters">Reset</button>
       </div>
+    </div>
+  `;
 
-      <div class="filter-actions">
-        <button id="resetFilters">Reset Filters</button>
+  bindGlobalChipEvents();
+}
+
+function chip(key, label) {
+  return `
+    <div class="filter-chip" data-filter="${key}">
+      <span class="chip-label">${label}</span>
+      <span class="chip-value" id="${key}-value">All</span>
+      <span class="chip-arrow">▾</span>
+
+      <div class="chip-dropdown" id="${key}-dropdown">
+        <input type="text" placeholder="Search" class="chip-search" />
+        <div class="chip-options"></div>
       </div>
     </div>
   `;
 }
 
-function populateFilterOptions() {
+/* =========================
+   POPULATE OPTIONS
+========================= */
+
+function populateChipOptions() {
   const sale = APP_STATE.rawData.sale;
 
-  fillMultiSelect("filterMonth", unique(sale, "Month"));
-  fillMultiSelect("filterFC", unique(sale, "FC"));
-  fillMultiSelect("filterMP", unique(sale, "MP"));
-  fillMultiSelect("filterAccount", unique(sale, "Account"));
+  setupChip("month", unique(sale, "Month"));
+  setupChip("fc", unique(sale, "FC"));
+  setupChip("mp", unique(sale, "MP"));
+  setupChip("account", unique(sale, "Account"));
 
   APP_STATE.filters.month = unique(sale, "Month");
   APP_STATE.filters.fc = unique(sale, "FC");
   APP_STATE.filters.mp = unique(sale, "MP");
   APP_STATE.filters.account = unique(sale, "Account");
 
-  bindFilterEvents();
+  bindStyleSearch();
 }
 
-function fillMultiSelect(id, values) {
-  const el = document.getElementById(id);
-  if (!el) return;
+function setupChip(key, values) {
+  const dropdown = document.querySelector(`#${key}-dropdown .chip-options`);
+  dropdown.innerHTML = values.map(v => `
+    <label>
+      <input type="checkbox" value="${v}" checked />
+      ${v}
+    </label>
+  `).join("");
 
-  el.innerHTML = values
-    .map(v => `<option value="${v}" selected>${v}</option>`)
-    .join("");
+  updateChipText(key);
+}
+
+/* =========================
+   EVENTS
+========================= */
+
+function bindGlobalChipEvents() {
+  document.querySelectorAll(".filter-chip").forEach(chip => {
+    chip.addEventListener("click", e => {
+      e.stopPropagation();
+      closeAllChips();
+      chip.classList.toggle("open");
+    });
+  });
+
+  document.addEventListener("click", closeAllChips);
+
+  document.getElementById("resetFilters").addEventListener("click", () => {
+    populateChipOptions();
+    document.getElementById("filterStyle").value = "";
+    APP_STATE.filters.styleId = "";
+  });
+}
+
+function closeAllChips() {
+  document.querySelectorAll(".filter-chip").forEach(c => c.classList.remove("open"));
+}
+
+function bindStyleSearch() {
+  document.getElementById("filterStyle").addEventListener("input", e => {
+    APP_STATE.filters.styleId = e.target.value.trim();
+  });
+}
+
+/* =========================
+   UTILITIES
+========================= */
+
+function updateChipText(key) {
+  const checked = document.querySelectorAll(
+    `#${key}-dropdown input:checked`
+  ).length;
+
+  const total = document.querySelectorAll(
+    `#${key}-dropdown input`
+  ).length;
+
+  const el = document.getElementById(`${key}-value`);
+  el.textContent = checked === total ? "All" : `${checked} selected`;
 }
 
 function unique(data, key) {
   return [...new Set(data.map(r => r[key]).filter(Boolean))].sort();
-}
-
-function bindFilterEvents() {
-  document.getElementById("filterMonth").addEventListener("change", e => {
-    APP_STATE.filters.month = selectedValues(e.target);
-  });
-
-  document.getElementById("filterFC").addEventListener("change", e => {
-    APP_STATE.filters.fc = selectedValues(e.target);
-  });
-
-  document.getElementById("filterMP").addEventListener("change", e => {
-    APP_STATE.filters.mp = selectedValues(e.target);
-  });
-
-  document.getElementById("filterAccount").addEventListener("change", e => {
-    APP_STATE.filters.account = selectedValues(e.target);
-  });
-
-  document.getElementById("filterStyle").addEventListener("input", e => {
-    APP_STATE.filters.styleId = e.target.value.trim();
-  });
-
-  document.getElementById("resetFilters").addEventListener("click", () => {
-    populateFilterOptions();
-    document.getElementById("filterStyle").value = "";
-  });
-}
-
-function selectedValues(select) {
-  return Array.from(select.selectedOptions).map(o => o.value);
 }
