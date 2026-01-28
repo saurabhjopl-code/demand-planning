@@ -1,97 +1,54 @@
 document.addEventListener("google-ready", async () => {
   try {
-    const sale = await fetchSheet("Sale");
-    const stock = await fetchSheet("Stock");
     const styleStatus = await fetchSheet("Style Status");
 
     const N = v => v == null ? "" : String(v).trim();
 
     /* ===============================
-       1. SALE & STOCK LOOKUPS
+       DEBUG: LOG FIRST ROW
+       (OPEN CONSOLE TO SEE THIS)
     =============================== */
-    const saleByStyle = {};
-    sale.forEach(r => {
-      const s = N(r["Style ID"]);
-      saleByStyle[s] = (saleByStyle[s] || 0) + (Number(r["Units"]) || 0);
-    });
-
-    const stockByStyle = {};
-    stock.forEach(r => {
-      const s = N(r["Style ID"]);
-      stockByStyle[s] = (stockByStyle[s] || 0) + (Number(r["Units"]) || 0);
-    });
+    console.log("Style Status sample row:", styleStatus[0]);
+    console.log("Style Status values:", Object.values(styleStatus[0]));
 
     /* ===============================
-       2. VIRTUAL STYLE STATUS TABLE
-       Column order based (A,B,C)
-    =============================== */
-    const rows = styleStatus.map(r => {
-      const vals = Object.values(r);
-      const styleId = N(vals[0]);   // Column A
-      const category = N(vals[1]);  // Column B
-      const remark = N(vals[2]);    // Column C
-
-      return {
-        styleId,
-        category,
-        remark,
-        sale: saleByStyle[styleId] || 0,
-        stock: stockByStyle[styleId] || 0
-      };
-    });
-
-    /* ===============================
-       3. PIVOT BY COMPANY REMARK
+       COUNT STYLES BY COMPANY REMARK
+       USING COLUMN POSITION
+       A = Style ID
+       B = Category
+       C = Company Remark
     =============================== */
     const result = {};
-    let grandTotalSale = 0;
 
-    rows.forEach(r => {
-      if (!r.styleId) return;
+    styleStatus.forEach(row => {
+      const vals = Object.values(row);
 
-      const key = r.remark || "UNMAPPED";
+      const styleId = N(vals[0]);   // Column A
+      const companyRemark = N(vals[2]); // Column C
 
-      if (!result[key]) {
-        result[key] = {
-          styles: new Set(),
-          sale: 0,
-          stock: 0
-        };
-      }
+      if (!styleId) return;
 
-      result[key].styles.add(r.styleId);
-      result[key].sale += r.sale;
-      result[key].stock += r.stock;
+      const key = companyRemark || "UNMAPPED";
 
-      grandTotalSale += r.sale;
+      result[key] = (result[key] || 0) + 1;
     });
 
     /* ===============================
-       4. RENDER
+       RENDER (COUNT ONLY)
     =============================== */
     let html = `
-      <h3>Company Remark Wise Sale</h3>
+      <h3>Company Remark Wise (DEBUG – COUNT ONLY)</h3>
       <table class="summary-table">
         <tr>
           <th>Company Remark</th>
           <th>Count of Style ID</th>
-          <th>Sum of Total Sale</th>
-          <th>Sale Contribution %</th>
-          <th>Sum of Total Stock</th>
         </tr>`;
 
     Object.keys(result).forEach(k => {
-      const pct = grandTotalSale
-        ? ((result[k].sale / grandTotalSale) * 100).toFixed(2)
-        : "0.00";
-
       html += `
         <tr>
           <td>${k}</td>
-          <td>${result[k].styles.size}</td>
-          <td>${result[k].sale}</td>
-          <td>${pct}%</td>
-          <td>${result[k].stock}</td>
+          <td>${result[k]}</td>
         </tr>`;
     });
 
@@ -99,6 +56,6 @@ document.addEventListener("google-ready", async () => {
     document.getElementById("summary5").innerHTML = html;
 
   } catch (e) {
-    console.error("Summary 5 failed:", e);
+    console.error("Summary 5 DEBUG failed:", e);
   }
 });
